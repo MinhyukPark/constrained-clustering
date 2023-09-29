@@ -10,7 +10,6 @@ int MinCutCustom::ComputeMinCut() {
     cfg->save_cut = true;
     cfg->set_node_in_cut = true;
     random_functions::setSeed(0);
-    /* std::shared_ptr<graph_type> G = std::make_shared<graph_type>(); */
     std::shared_ptr<graph_type> G = std::make_shared<graph_type>();
 
     // make input output mapping of node ids
@@ -22,7 +21,6 @@ int MinCutCustom::ComputeMinCut() {
     G->start_construction(num_nodes, num_edges * 2);
     for(int i = 0; i < num_nodes; i ++) {
         NodeID current_node = G->new_node();
-        /* G->setPartitionIndex(current_node, 0); */
     }
 
     igraph_eit_t eit;
@@ -38,12 +36,10 @@ int MinCutCustom::ComputeMinCut() {
     igraph_eit_destroy(&eit);
 
     G->finish_construction();
-    /* G->computeDegrees(); */
 
-    auto* cmc = selectMincutAlgorithm<GraphPtr>(cfg->algorithm);
-    /* auto* cmc = new cactus_mincut<GraphPtr>(); */
+    /* auto* cmc = selectMincutAlgorithm<GraphPtr>(cfg->algorithm); */
+    auto* cmc = new cactus_mincut<GraphPtr>();
     EdgeWeight cut = cmc->perform_minimum_cut(G);
-    /* std::cerr << "current edge cut size is " << edge_cut_size << std::endl; */
     std::cerr << "current edge cut size is " << cut << std::endl;
     edge_cut_size = cut;
 
