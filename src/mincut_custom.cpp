@@ -13,6 +13,7 @@ int MinCutCustom::ComputeMinCut() {
 
     // make input output mapping of node ids
     // make sure graph is connected
+    // igraph maybe just always has increasing node ids starting at 0 and also is connected
     int num_nodes = 2;
     int num_edges = 1;
     G->start_construction(num_nodes, num_edges);

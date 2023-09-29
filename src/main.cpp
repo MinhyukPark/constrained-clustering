@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
         std::string output_file = mincut_global_cluster_repeat.get<std::string>("--output-file");
         std::string log_file = mincut_global_cluster_repeat.get<std::string>("--log-file");
         int log_level = mincut_global_cluster_repeat.get<int>("--log-level");
-        ConstrainedClustering* mgcr = new MincutGlobalClusterRepeat(edgelist, algorithm, resolution, num_processors, output_file, log_file, log_level);
-        mgcr->main();
-        delete mgcr;
+        ConstrainedClustering* mcgcr = new MinCutGlobalClusterRepeat(edgelist, algorithm, resolution, num_processors, output_file, log_file, log_level);
+        mcgcr->main();
+        delete mcgcr;
     }
 }

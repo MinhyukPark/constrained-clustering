@@ -47,6 +47,7 @@ class MinCutCustom {
     private:
         std::vector<int> in_partition;
         std::vector<int> out_partition;
+        std::map<int, int> new_to_old_node_id_map;
         igraph_t* graph;
 };
 

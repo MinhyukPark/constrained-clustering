@@ -136,8 +136,71 @@ int ConstrainedClustering::write_to_log_file(std::string message, int message_ty
     return 0;
 }
 
-int MincutGlobalClusterRepeat::main() {
-    MinCutCustom mcc(NULL);
-    mcc.ComputeMinCut();
+std::map<int, std::vector<int>> GetConnectedComponents(igraph_t* graph_ptr) {
+    std::map<int, std::vector<int>> component_id_to_member_vector_map;
+    igraph_vector_int_t component_id_vector;
+    igraph_vector_int_init(&component_id_vector, 0);
+    igraph_vector_int_t membership_size_vector;
+    igraph_vector_int_init(&membership_size_vector, 0);
+    igraph_integer_t number_of_components;
+    igraph_connected_components(graph_ptr, &component_id_vector, &membership_size_vector, &number_of_components, IGRAPH_WEAK);
+    for(int node_id = 0; node_id < igraph_vcount(graph_ptr); node_id ++) {
+        int current_component_id = VECTOR(component_id_vector)[node_id];
+        if(VECTOR(membership_size_vector)[current_component_id] > 1) {
+            component_id_to_member_vector_map[current_component_id].push_back(node_id);
+        }
+    }
+    igraph_vector_int_destroy(&component_id_vector);
+    igraph_vector_int_destroy(&membership_size_vector);
+    return component_id_to_member_vector_map;
+}
+
+int MinCutGlobalClusterRepeat::main() {
+    std::cerr << "got to mcgcr main" << std::endl;
+    // load edgelist into igraph
+    this->write_to_log_file("Loading the initial graph" , 1);
+    FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
+    igraph_t graph;
+    igraph_read_graph_edgelist(&graph, edgelist_file, 0, false);
+    fclose(edgelist_file);
+    this->write_to_log_file("Finished loading the initial graph" , 1);
+
+    std::cerr << "loaded graph" << std::endl;
+
+    std::queue<std::vector<int>> to_be_mincut_clusters;
+
+    // get its connected components
+    std::map<int, std::vector<int>> component_id_to_member_vector_map = GetConnectedComponents(&graph);
+    std::cerr << "got connected components" << std::endl;
+    for(auto const& [component_id, member_vector] : component_id_to_member_vector_map) {
+        std::cout << "component_id: " << component_id << " - ";
+        for(int i = 0; i < member_vector.size(); i ++) {
+            std::cout << member_vector[i] << " ";
+        }
+        std::cout << std::endl;
+        to_be_mincut_clusters.push(member_vector);
+    }
+
+
+    // for every component with size greater than zero,
+    // add to input queue the node list with respect to the global graph
+    //
+    //
+    // each worker:
+    // pop from queue
+    // make induced subgraph on the nodelist
+    // run mincut on it
+    // push the two partitions (or 1 if well-connected condition is satified) to output queue with node ids with respect to the global graph
+    //
+    // make map of node id to cluster id here (partition id)
+    // iterate through edges of the global graph
+    // add to remove list if two ends of the edge are not in the same partition
+    // remove edges
+    // run leiden
+    // this is the saved clustering
+    // push each clustering as node list into queue for mincut workers
+    // check if the output queue clustering is the same as the saved clustering, otherwise continue
+
+
     return 0;
 }

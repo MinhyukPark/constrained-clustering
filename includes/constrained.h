@@ -39,9 +39,9 @@ class ConstrainedClustering {
         int log_level;
 };
 
-class MincutGlobalClusterRepeat : public ConstrainedClustering {
+class MinCutGlobalClusterRepeat : public ConstrainedClustering {
     public:
-        MincutGlobalClusterRepeat(std::string edgelist, std::string algorithm, double resolution, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, resolution, num_processors, output_file, log_file, log_level) {
+        MinCutGlobalClusterRepeat(std::string edgelist, std::string algorithm, double resolution, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, resolution, num_processors, output_file, log_file, log_level) {
         };
         int main();
 };
