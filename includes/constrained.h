@@ -3,7 +3,10 @@
 /* #pragma once */
 #include "mincut_custom.h"
 
+#include <cmath>
 #include <chrono>
+#include <condition_variable>
+#include <thread>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -20,6 +23,7 @@ class ConstrainedClustering {
         };
         virtual int main() = 0;
         int write_to_log_file(std::string message, int message_type);
+        void RemoveInterClusterEdges(igraph_t* graph, const std::map<int,int>& node_id_to_cluster_id_map);
         void write_partition_map(std::map<int,int>& final_partition);
         void start_workers(std::vector<std::map<int,int>>& results, igraph_t* graph);
         virtual ~ConstrainedClustering() {

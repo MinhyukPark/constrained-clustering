@@ -8,39 +8,55 @@ int MinCutCustom::ComputeMinCut() {
     cfg->find_most_balanced_cut = true;
     cfg->threads = 1;
     cfg->save_cut = true;
+    cfg->set_node_in_cut = true;
     random_functions::setSeed(0);
+    /* std::shared_ptr<graph_type> G = std::make_shared<graph_type>(); */
     std::shared_ptr<graph_type> G = std::make_shared<graph_type>();
 
     // make input output mapping of node ids
     // make sure graph is connected
     // igraph maybe just always has increasing node ids starting at 0 and also is connected
-    int num_nodes = 2;
-    int num_edges = 1;
-    G->start_construction(num_nodes, num_edges);
-    NodeID node_u = G->new_node();
-    G->setPartitionIndex(node_u, 0);
-    NodeID node_v = G->new_node();
-    G->setPartitionIndex(node_v, 0);
-    NodeID node_t = G->new_node();
-    G->setPartitionIndex(node_t, 0);
-
-    G->new_edge(node_u, node_v, 1);
-    G->finish_construction();
-    G->computeDegrees();
-
-    /* auto* cmc = selectMincutAlgorithm<GraphPtr>(cfg->algorithm); */
-    auto* cmc = new cactus_mincut<GraphPtr>();
-    cmc->perform_minimum_cut(G);
-
-    if(G->getNodeInCut(0)) {
-        std::cout << "0 is in cut" << std::endl;
-    } else {
-        std::cout << "0 is not in cut" << std::endl;
+    int num_nodes = igraph_vcount(this->graph);
+    int num_edges = igraph_ecount(this->graph);
+    std::cerr << "mincut being requested on " << num_nodes << " nodes and " << num_edges << " edges" << std::endl;
+    G->start_construction(num_nodes, num_edges * 2);
+    for(int i = 0; i < num_nodes; i ++) {
+        NodeID current_node = G->new_node();
+        /* G->setPartitionIndex(current_node, 0); */
     }
-    if(G->getNodeInCut(1)) {
-        std::cout << "1 is in cut" << std::endl;
-    } else {
-        std::cout << "1 is not in cut" << std::endl;
+
+    igraph_eit_t eit;
+    igraph_eit_create(this->graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
+    for (; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
+        igraph_integer_t current_edge = IGRAPH_EIT_GET(eit);
+        int from_node = IGRAPH_FROM(this->graph, current_edge);
+        int to_node = IGRAPH_TO(this->graph, current_edge);
+        std::cerr << "edge from " << from_node << " to " << to_node << std::endl;
+        G->new_edge(from_node, to_node, 1);
+        G->new_edge(to_node, from_node, 1);
+    }
+    igraph_eit_destroy(&eit);
+
+    G->finish_construction();
+    /* G->computeDegrees(); */
+
+    auto* cmc = selectMincutAlgorithm<GraphPtr>(cfg->algorithm);
+    /* auto* cmc = new cactus_mincut<GraphPtr>(); */
+    EdgeWeight cut = cmc->perform_minimum_cut(G);
+    /* std::cerr << "current edge cut size is " << edge_cut_size << std::endl; */
+    std::cerr << "current edge cut size is " << cut << std::endl;
+    edge_cut_size = cut;
+
+
+    for(int node_id = 0; node_id < num_nodes; node_id ++) {
+        std::cout << "node cut info for node_id " << node_id << " :: " << G->getNodeInCut(node_id) << std::endl;
+        if(G->getNodeInCut(node_id)) {
+            std::cout << node_id << " is in cut" << std::endl;
+            this->in_partition.push_back(node_id);
+        } else {
+            std::cout << node_id << " is not in cut" << std::endl;
+            this->out_partition.push_back(node_id);
+        }
     }
 
     return edge_cut_size;

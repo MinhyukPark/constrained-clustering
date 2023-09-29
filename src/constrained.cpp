@@ -85,6 +85,7 @@ std::map<int, int> get_communities(std::string edgelist, std::string algorithm, 
         Graph leiden_graph(&graph);
         CPMVertexPartition partition(&leiden_graph, clustering_parameter);
         run_leiden_and_update_partition(partition_map, &partition, &graph);
+        std::cerr << "finished running leiden-cpm" << std::endl;
     } else if(algorithm == "leiden-mod") {
         Graph leiden_graph(&graph);
         ModularityVertexPartition partition(&leiden_graph);
@@ -136,7 +137,8 @@ int ConstrainedClustering::write_to_log_file(std::string message, int message_ty
     return 0;
 }
 
-std::map<int, std::vector<int>> GetConnectedComponents(igraph_t* graph_ptr) {
+std::vector<std::vector<int>> GetConnectedComponents(igraph_t* graph_ptr) {
+    std::vector<std::vector<int>> connected_components_vector;
     std::map<int, std::vector<int>> component_id_to_member_vector_map;
     igraph_vector_int_t component_id_vector;
     igraph_vector_int_init(&component_id_vector, 0);
@@ -152,11 +154,92 @@ std::map<int, std::vector<int>> GetConnectedComponents(igraph_t* graph_ptr) {
     }
     igraph_vector_int_destroy(&component_id_vector);
     igraph_vector_int_destroy(&membership_size_vector);
-    return component_id_to_member_vector_map;
+    for(auto const& [component_id, member_vector] : component_id_to_member_vector_map) {
+        connected_components_vector.push_back(member_vector);
+    }
+    std::cerr << number_of_components << " connected components found" << std::endl;
+    return connected_components_vector;
+}
+
+
+std::mutex to_be_mincut_mutex;
+std::condition_variable to_be_mincut_condition_variable;
+std::queue<std::vector<int>> to_be_mincut_clusters;
+
+std::mutex to_be_clustered_mutex;
+std::queue<std::vector<int>> to_be_clustered_clusters;
+
+void MincutWorker(igraph_t* graph) {
+    while (true) {
+        std::cerr << "entering while loop for mincut worker" << std::endl;
+        std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
+        to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() {
+            return !to_be_mincut_clusters.empty();
+        });
+        std::vector<int> current_cluster = to_be_mincut_clusters.front();
+        to_be_mincut_clusters.pop();
+        to_be_mincut_lock.unlock();
+        if(current_cluster.size() == 1 && current_cluster[0] == -1) {
+            // done with work!
+            return;
+        }
+        igraph_vector_int_t nodes_to_keep;
+        igraph_vector_int_t new_id_to_old_id_map;
+        igraph_vector_int_init(&new_id_to_old_id_map, current_cluster.size());
+        igraph_vector_int_init(&nodes_to_keep, current_cluster.size());
+        for(size_t i = 0; i < current_cluster.size(); i ++) {
+            VECTOR(nodes_to_keep)[i] = current_cluster[i];
+        }
+        igraph_t induced_subgraph;
+        igraph_induced_subgraph_map(graph, &induced_subgraph, igraph_vss_vector(&nodes_to_keep), IGRAPH_SUBGRAPH_CREATE_FROM_SCRATCH, NULL, &new_id_to_old_id_map);
+        MinCutCustom mcc(&induced_subgraph);
+        int edge_cut_size = mcc.ComputeMinCut();
+        std::cerr << "some thread got the lock and obtained a cluster to be mincut. cluster size: " << current_cluster.size() << " and mincut edge size: " << edge_cut_size << std::endl;
+        if(edge_cut_size != 0 && edge_cut_size < log10(current_cluster.size())) {
+            std::vector<int> in_partition = mcc.GetInPartition();
+            std::vector<int> out_partition = mcc.GetOutPartition();
+            for(size_t i = 0; i < in_partition.size(); i ++) {
+                in_partition[i] = VECTOR(new_id_to_old_id_map)[in_partition[i]];
+            }
+            for(size_t i = 0; i < out_partition.size(); i ++) {
+                out_partition[i] = VECTOR(new_id_to_old_id_map)[out_partition[i]];
+            }
+            std::unique_lock<std::mutex> to_be_clustered_lock{to_be_clustered_mutex};
+            to_be_clustered_clusters.push(in_partition);
+            to_be_clustered_clusters.push(out_partition);
+            to_be_clustered_lock.unlock();
+        } else {
+            std::unique_lock<std::mutex> to_be_clustered_lock{to_be_clustered_mutex};
+            to_be_clustered_clusters.push(current_cluster);
+            to_be_clustered_lock.unlock();
+        }
+
+        igraph_destroy(&induced_subgraph);
+    }
+}
+
+void ConstrainedClustering::RemoveInterClusterEdges(igraph_t* graph, const std::map<int,int>& node_id_to_cluster_id_map) {
+    igraph_vector_int_t edges_to_remove;
+    igraph_vector_int_init(&edges_to_remove, 0);
+    igraph_eit_t eit;
+    igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
+    for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
+        igraph_integer_t current_edge = IGRAPH_EIT_GET(eit);
+        int from_node = IGRAPH_FROM(graph, current_edge);
+        int to_node = IGRAPH_TO(graph, current_edge);
+        if(node_id_to_cluster_id_map.at(from_node) != node_id_to_cluster_id_map.at(to_node)) {
+            igraph_vector_int_push_back(&edges_to_remove, IGRAPH_EIT_GET(eit));
+        }
+    }
+    igraph_es_t es;
+    igraph_es_vector_copy(&es, &edges_to_remove);
+    igraph_delete_edges(graph, es);
+    igraph_eit_destroy(&eit);
+    igraph_es_destroy(&es);
+    igraph_vector_int_destroy(&edges_to_remove);
 }
 
 int MinCutGlobalClusterRepeat::main() {
-    std::cerr << "got to mcgcr main" << std::endl;
     // load edgelist into igraph
     this->write_to_log_file("Loading the initial graph" , 1);
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
@@ -165,20 +248,63 @@ int MinCutGlobalClusterRepeat::main() {
     fclose(edgelist_file);
     this->write_to_log_file("Finished loading the initial graph" , 1);
 
-    std::cerr << "loaded graph" << std::endl;
 
-    std::queue<std::vector<int>> to_be_mincut_clusters;
-
+    int before_mincut_number_of_clusters = -1;
+    int after_mincut_number_of_clusters = -2;
     // get its connected components
-    std::map<int, std::vector<int>> component_id_to_member_vector_map = GetConnectedComponents(&graph);
-    std::cerr << "got connected components" << std::endl;
-    for(auto const& [component_id, member_vector] : component_id_to_member_vector_map) {
-        std::cout << "component_id: " << component_id << " - ";
-        for(int i = 0; i < member_vector.size(); i ++) {
-            std::cout << member_vector[i] << " ";
+    while (true) {
+        std::vector<std::vector<int>> connected_components_vector = GetConnectedComponents(&graph);
+        for(size_t i = 0; i < connected_components_vector.size(); i ++) {
+            to_be_mincut_clusters.push(connected_components_vector[i]);
         }
-        std::cout << std::endl;
-        to_be_mincut_clusters.push(member_vector);
+        std::cerr << to_be_mincut_clusters.size() << " number of clusters to be mincut" << std::endl;
+        before_mincut_number_of_clusters = to_be_mincut_clusters.size();
+        for(int i = 0; i < this->num_processors; i ++) {
+            to_be_mincut_clusters.push({-1});
+        }
+        std::vector<std::thread> thread_vector;
+        for(int i = 0; i < this->num_processors; i ++) {
+            thread_vector.push_back(std::thread(MincutWorker, &graph));
+        }
+        for(size_t thread_index = 0; thread_index < thread_vector.size(); thread_index ++) {
+            thread_vector[thread_index].join();
+        }
+        std::cerr << to_be_clustered_clusters.size() << " number of clusters to be clustered" << std::endl;
+        after_mincut_number_of_clusters = to_be_clustered_clusters.size();
+        if(before_mincut_number_of_clusters == after_mincut_number_of_clusters) {
+            std::cerr << "all clusters are well-connected" << std::endl;
+            break;
+        }
+
+
+        std::map<int, int> node_id_to_cluster_id_map;
+        int cluster_id = 0;
+        while(!to_be_clustered_clusters.empty()) {
+            std::vector<int> current_cluster = to_be_clustered_clusters.front();
+            to_be_clustered_clusters.pop();
+            for(size_t i = 0; i < current_cluster.size(); i ++) {
+                node_id_to_cluster_id_map[current_cluster[i]] = cluster_id;
+            }
+            cluster_id ++;
+        }
+        this->RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
+        int seed = 0;
+        node_id_to_cluster_id_map = get_communities("", this->algorithm, seed, this->resolution, &graph);
+        this->RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
+    }
+
+
+    igraph_destroy(&graph);
+
+    std::cerr << "final clusters:" << std::endl;
+    while(!to_be_clustered_clusters.empty()) {
+        std::vector<int> current_cluster = to_be_clustered_clusters.front();
+        to_be_clustered_clusters.pop();
+        std::cerr << "new cluster" << std::endl;;
+        for(size_t i = 0; i < current_cluster.size(); i ++) {
+            std::cerr << current_cluster[i] << " ";
+        }
+        std::cerr << std::endl;
     }
 
 

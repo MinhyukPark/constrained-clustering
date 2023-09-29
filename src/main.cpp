@@ -4,6 +4,7 @@
 #include "library.h"
 #include "constrained.h"
 
+
 int main(int argc, char* argv[]) {
     argparse::ArgumentParser main_program("constrained-clustering");
     argparse::ArgumentParser mincut_global_cluster_repeat("MincutGlobalClusterRepeat");

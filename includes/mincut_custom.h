@@ -13,7 +13,7 @@
 #include <vector>
 #include <tuple>
 
-/* #include "algorithms/global_mincut/algorithms.h" */
+#include "algorithms/global_mincut/algorithms.h"
 #include "algorithms/global_mincut/cactus/cactus_mincut.h"
 /* #include "cactus_mincut.h" */
 /* #include "algorithms/global_mincut/minimum_cut.h" */
