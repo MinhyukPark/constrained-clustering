@@ -7,6 +7,8 @@ if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
 else()
     #[[ Set project version ]]
     project(consensus_clustering)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib/cmake/igraph)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib/cmake/libleidenalg)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/igraph)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/libleidenalg)
     find_package(igraph 0.10 CONFIG REQUIRED)
@@ -59,7 +61,6 @@ else()
 
     #[[ Link libraries ]]
     add_subdirectory(libs)
-    # add_subdirectory(${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx)
     target_link_libraries(constrained_clustering PUBLIC external_libs)
 
     #[[ Link external libraries ]]

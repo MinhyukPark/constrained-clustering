@@ -85,7 +85,7 @@ std::map<int, int> get_communities(std::string edgelist, std::string algorithm, 
         Graph leiden_graph(&graph);
         CPMVertexPartition partition(&leiden_graph, clustering_parameter);
         run_leiden_and_update_partition(partition_map, &partition, &graph);
-        std::cerr << "finished running leiden-cpm" << std::endl;
+        std::cerr << "constrained.cpp: finished running leiden-cpm" << std::endl;
     } else if(algorithm == "leiden-mod") {
         Graph leiden_graph(&graph);
         ModularityVertexPartition partition(&leiden_graph);
@@ -157,7 +157,7 @@ std::vector<std::vector<int>> GetConnectedComponents(igraph_t* graph_ptr) {
     for(auto const& [component_id, member_vector] : component_id_to_member_vector_map) {
         connected_components_vector.push_back(member_vector);
     }
-    std::cerr << number_of_components << " connected components found" << std::endl;
+    std::cerr << "constrained.cpp: " << number_of_components << " connected components found" << std::endl;
     return connected_components_vector;
 }
 
@@ -171,7 +171,7 @@ std::queue<std::vector<int>> to_be_clustered_clusters;
 
 void MincutWorker(igraph_t* graph) {
     while (true) {
-        std::cerr << "entering while loop for mincut worker" << std::endl;
+        std::cerr << "constrained.cpp: entering while loop for mincut worker" << std::endl;
         std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
         to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() {
             return !to_be_mincut_clusters.empty();
@@ -194,7 +194,7 @@ void MincutWorker(igraph_t* graph) {
         igraph_induced_subgraph_map(graph, &induced_subgraph, igraph_vss_vector(&nodes_to_keep), IGRAPH_SUBGRAPH_CREATE_FROM_SCRATCH, NULL, &new_id_to_old_id_map);
         MinCutCustom mcc(&induced_subgraph);
         int edge_cut_size = mcc.ComputeMinCut();
-        std::cerr << "some thread got the lock and obtained a cluster to be mincut. cluster size: " << current_cluster.size() << " and mincut edge size: " << edge_cut_size << std::endl;
+        std::cerr << "constrained.cpp: some thread got the lock and obtained a cluster to be mincut. cluster size: " << current_cluster.size() << " and mincut edge size: " << edge_cut_size << std::endl;
         if(edge_cut_size != 0 && edge_cut_size < log10(current_cluster.size())) {
             std::vector<int> in_partition = mcc.GetInPartition();
             std::vector<int> out_partition = mcc.GetOutPartition();
@@ -257,7 +257,7 @@ int MinCutGlobalClusterRepeat::main() {
         for(size_t i = 0; i < connected_components_vector.size(); i ++) {
             to_be_mincut_clusters.push(connected_components_vector[i]);
         }
-        std::cerr << to_be_mincut_clusters.size() << " number of clusters to be mincut" << std::endl;
+        std::cerr << "constrained.cpp: " << to_be_mincut_clusters.size() << " number of clusters to be mincut" << std::endl;
         before_mincut_number_of_clusters = to_be_mincut_clusters.size();
         for(int i = 0; i < this->num_processors; i ++) {
             to_be_mincut_clusters.push({-1});
@@ -269,10 +269,10 @@ int MinCutGlobalClusterRepeat::main() {
         for(size_t thread_index = 0; thread_index < thread_vector.size(); thread_index ++) {
             thread_vector[thread_index].join();
         }
-        std::cerr << to_be_clustered_clusters.size() << " number of clusters to be clustered" << std::endl;
+        std::cerr << "constrained.cpp: " << to_be_clustered_clusters.size() << " number of clusters to be clustered" << std::endl;
         after_mincut_number_of_clusters = to_be_clustered_clusters.size();
         if(before_mincut_number_of_clusters == after_mincut_number_of_clusters) {
-            std::cerr << "all clusters are well-connected" << std::endl;
+            std::cerr << "constrained.cpp: all clusters are well-connected" << std::endl;
             break;
         }
 
@@ -296,11 +296,12 @@ int MinCutGlobalClusterRepeat::main() {
 
     igraph_destroy(&graph);
 
-    std::cerr << "final clusters:" << std::endl;
+    std::cerr << "constrained.cpp: final clusters:" << std::endl;
     while(!to_be_clustered_clusters.empty()) {
         std::vector<int> current_cluster = to_be_clustered_clusters.front();
         to_be_clustered_clusters.pop();
-        std::cerr << "new cluster" << std::endl;;
+        std::cerr << "constrained.cpp: new cluster" << std::endl;;
+        std::cerr << "constrained.cpp: ";
         for(size_t i = 0; i < current_cluster.size(); i ++) {
             std::cerr << current_cluster[i] << " ";
         }
