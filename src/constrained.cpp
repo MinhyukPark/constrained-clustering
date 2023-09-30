@@ -191,6 +191,8 @@ void MincutWorker(igraph_t* graph) {
             VECTOR(nodes_to_keep)[i] = current_cluster[i];
         }
         igraph_t induced_subgraph;
+        // technically could just pass in the nodes and edges info directly by iterating through the edges and checking if it's inter vs intracluster
+        // likely not too much of a memory or time overhead
         igraph_induced_subgraph_map(graph, &induced_subgraph, igraph_vss_vector(&nodes_to_keep), IGRAPH_SUBGRAPH_CREATE_FROM_SCRATCH, NULL, &new_id_to_old_id_map);
         MinCutCustom mcc(&induced_subgraph);
         int edge_cut_size = mcc.ComputeMinCut();
@@ -307,27 +309,5 @@ int MinCutGlobalClusterRepeat::main() {
         }
         std::cerr << std::endl;
     }
-
-
-    // for every component with size greater than zero,
-    // add to input queue the node list with respect to the global graph
-    //
-    //
-    // each worker:
-    // pop from queue
-    // make induced subgraph on the nodelist
-    // run mincut on it
-    // push the two partitions (or 1 if well-connected condition is satified) to output queue with node ids with respect to the global graph
-    //
-    // make map of node id to cluster id here (partition id)
-    // iterate through edges of the global graph
-    // add to remove list if two ends of the edge are not in the same partition
-    // remove edges
-    // run leiden
-    // this is the saved clustering
-    // push each clustering as node list into queue for mincut workers
-    // check if the output queue clustering is the same as the saved clustering, otherwise continue
-
-
     return 0;
 }

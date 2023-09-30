@@ -1,10 +1,8 @@
 #include "mincut_custom.h"
 
 int MinCutCustom::ComputeMinCut() {
-    int edge_cut_size = 0;
+    int edge_cut_size = -1;
     auto cfg = configuration::getConfig();
-    cfg->algorithm = "cactus";
-    cfg->queue_type = "bqueue";
     cfg->find_most_balanced_cut = true;
     cfg->threads = 1;
     cfg->save_cut = true;
@@ -37,11 +35,9 @@ int MinCutCustom::ComputeMinCut() {
 
     G->finish_construction();
 
-    /* auto* cmc = selectMincutAlgorithm<GraphPtr>(cfg->algorithm); */
     auto* cmc = new cactus_mincut<GraphPtr>();
-    EdgeWeight cut = cmc->perform_minimum_cut(G);
-    std::cerr << "mincut_custom.cpp: current edge cut size is " << cut << std::endl;
-    edge_cut_size = cut;
+    edge_cut_size = cmc->perform_minimum_cut(G);
+    std::cerr << "mincut_custom.cpp: current edge cut size is " << edge_cut_size << std::endl;
 
 
     for(int node_id = 0; node_id < num_nodes; node_id ++) {

@@ -29,6 +29,7 @@ else()
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # for clangd lsp
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -march=native ")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -ggdb")
     set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -g -O0 -ggdb")
     # File paths
@@ -49,9 +50,7 @@ else()
     target_include_directories(internal_libs
         PUBLIC ${CMAKE_SOURCE_DIR}/includes
         PUBLIC ${CMAKE_SOURCE_DIR}/src
-        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/app
         PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/lib
-        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/growt
         PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx
     )
     target_link_libraries(internal_libs PUBLIC igraph::igraph)

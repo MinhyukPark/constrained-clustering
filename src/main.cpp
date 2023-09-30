@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "argparse.h"
-#include "library.h"
 #include "constrained.h"
+#include "library.h"
 
 
 int main(int argc, char* argv[]) {

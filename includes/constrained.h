@@ -1,6 +1,6 @@
 #ifndef CONSTRAINED_H
 #define CONSTRAINED_H
-/* #pragma once */
+// mincut_custom.h needs to be included first because of string override
 #include "mincut_custom.h"
 
 #include <cmath>
@@ -12,6 +12,7 @@
 #include <libleidenalg/Optimiser.h>
 #include <libleidenalg/CPMVertexPartition.h>
 #include <libleidenalg/ModularityVertexPartition.h>
+
 
 class ConstrainedClustering {
     public:
