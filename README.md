@@ -4,9 +4,9 @@
 ## MincutGlobalClusterRepeat
 MincutGlobalClusterRepeat starts with a network and does rounds of the following four steps.
 1. Get the connected components in the network and split each component into two subsets by its mincut
-    1. Ensure that there are no edges that connect nodes in one subset to nodes in another subset. In other words, only keep edges that start and end within its own subset.
+     1. Ensure that there are no edges that connect nodes in one subset to nodes in another subset. In other words, only keep edges that start and end within its own subset.
 2. Run a clustering method on the entire network which now has fewer edges due to the previous removal process.
-    2. Again, ensure that after the clustering method has run, only those edges that connect nodes within a cluster survive. Remove any edge that connect a node from one cluster to a node in another cluster.
+     2. Again, ensure that after the clustering method has run, only those edges that connect nodes within a cluster survive. Remove any edge that connect a node from one cluster to a node in another cluster.
 
 
 This process repeats until we detect that after step 1 all clusters are well-connected and there are no mincuts to be made.
