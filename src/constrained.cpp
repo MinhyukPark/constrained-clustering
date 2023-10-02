@@ -128,9 +128,6 @@ std::map<int, int> get_communities(std::string edgelist, std::string algorithm, 
     return partition_map;
 }
 
-/*
- * message type here is 1 for INFO, 2 for DEBUG, and -1 for ERROR
- */
 int ConstrainedClustering::write_to_log_file(std::string message, Log message_type) {
     if(this->log_level >= message_type) {
         std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -304,7 +301,7 @@ int MinCutGlobalClusterRepeat::main() {
         after_mincut_number_of_clusters = to_be_clustered_clusters.size();
         if(before_mincut_number_of_clusters == after_mincut_number_of_clusters) {
             this->write_to_log_file("all clusters are well-connected", Log::info);
-            this->write_to_log_file("Total number of iterations: " + std::to_string(iter_count), Log::info);
+            this->write_to_log_file("Total number of iterations: " + std::to_string(iter_count + 1), Log::info);
             break;
         }
 

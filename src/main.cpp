@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
         int num_processors = mincut_global_cluster_repeat.get<int>("--num-processors");
         std::string output_file = mincut_global_cluster_repeat.get<std::string>("--output-file");
         std::string log_file = mincut_global_cluster_repeat.get<std::string>("--log-file");
-        int log_level = mincut_global_cluster_repeat.get<int>("--log-level");
+        int log_level = mincut_global_cluster_repeat.get<int>("--log-level") - 1; // so that enum is cleaner
         ConstrainedClustering* mcgcr = new MinCutGlobalClusterRepeat(edgelist, algorithm, resolution, num_processors, output_file, log_file, log_level);
         mcgcr->main();
         delete mcgcr;
