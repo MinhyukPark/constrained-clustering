@@ -27,6 +27,7 @@ class ConstrainedClustering {
         void RemoveInterClusterEdges(igraph_t* graph, const std::map<int,int>& node_id_to_cluster_id_map);
         void write_partition_map(std::map<int,int>& final_partition);
         void start_workers(std::vector<std::map<int,int>>& results, igraph_t* graph);
+        void write_cluster_queue(std::queue<std::vector<int>>& to_be_clustered_clusters);
         virtual ~ConstrainedClustering() {
             if(this->log_level > 0) {
                 this->log_file_handle.close();

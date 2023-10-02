@@ -4,10 +4,6 @@
 #include <algorithms/global_mincut/cactus/cactus_mincut.h>
 #include <igraph/igraph.h>
 
-// typedef graph_access graph_type;
-typedef mutable_graph graph_type;
-typedef std::shared_ptr<graph_type> GraphPtr;
-
 class MinCutCustom {
     public:
         MinCutCustom(igraph_t* graph) : graph(graph) {
@@ -19,7 +15,7 @@ class MinCutCustom {
         std::vector<int> in_partition;
         std::vector<int> out_partition;
         std::map<int, int> new_to_old_node_id_map;
-        igraph_t* graph;
+        const igraph_t* graph;
 };
 
 #endif

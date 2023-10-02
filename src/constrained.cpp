@@ -1,5 +1,24 @@
 #include "constrained.h"
 
+void ConstrainedClustering::write_cluster_queue(std::queue<std::vector<int>>& to_be_clustered_clusters) {
+    std::ofstream clustering_output(this->output_file);
+    int current_cluster_id = 0;
+    std::cerr << "constrained.cpp: final clusters:" << std::endl;
+    while(!to_be_clustered_clusters.empty()) {
+        std::vector<int> current_cluster = to_be_clustered_clusters.front();
+        to_be_clustered_clusters.pop();
+        std::cerr << "constrained.cpp: new cluster" << std::endl;;
+        std::cerr << "constrained.cpp: ";
+        for(size_t i = 0; i < current_cluster.size(); i ++) {
+            std::cerr << current_cluster[i] << " ";
+            clustering_output << current_cluster[i] << " " << current_cluster_id << '\n';
+        }
+        std::cerr << std::endl;
+        current_cluster_id ++;
+    }
+    clustering_output.close();
+}
+
 void ConstrainedClustering::write_partition_map(std::map<int, int>& final_partition) {
     std::ofstream clustering_output(this->output_file);
     for(auto const& [node_id, cluster_id]: final_partition) {
@@ -215,6 +234,8 @@ void MincutWorker(igraph_t* graph) {
             to_be_clustered_clusters.push(current_cluster);
             to_be_clustered_lock.unlock();
         }
+        igraph_vector_int_destroy(&nodes_to_keep);
+        igraph_vector_int_destroy(&new_id_to_old_id_map);
 
         igraph_destroy(&induced_subgraph);
     }
@@ -298,16 +319,6 @@ int MinCutGlobalClusterRepeat::main() {
 
     igraph_destroy(&graph);
 
-    std::cerr << "constrained.cpp: final clusters:" << std::endl;
-    while(!to_be_clustered_clusters.empty()) {
-        std::vector<int> current_cluster = to_be_clustered_clusters.front();
-        to_be_clustered_clusters.pop();
-        std::cerr << "constrained.cpp: new cluster" << std::endl;;
-        std::cerr << "constrained.cpp: ";
-        for(size_t i = 0; i < current_cluster.size(); i ++) {
-            std::cerr << current_cluster[i] << " ";
-        }
-        std::cerr << std::endl;
-    }
+    this->write_cluster_queue(to_be_clustered_clusters);
     return 0;
 }

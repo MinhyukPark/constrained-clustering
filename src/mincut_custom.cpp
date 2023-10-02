@@ -1,6 +1,7 @@
 #include "mincut_custom.h"
 
 int MinCutCustom::ComputeMinCut() {
+    std::cerr << "UNDEFINED_NODE IS " << UNDEFINED_NODE << std::endl;
     int edge_cut_size = -1;
     auto cfg = configuration::getConfig();
     cfg->find_most_balanced_cut = true;
@@ -8,7 +9,7 @@ int MinCutCustom::ComputeMinCut() {
     cfg->save_cut = true;
     cfg->set_node_in_cut = true;
     random_functions::setSeed(0);
-    std::shared_ptr<graph_type> G = std::make_shared<graph_type>();
+    std::shared_ptr<mutable_graph> G = std::make_shared<mutable_graph>();
 
     // make input output mapping of node ids
     // make sure graph is connected
@@ -16,9 +17,10 @@ int MinCutCustom::ComputeMinCut() {
     int num_nodes = igraph_vcount(this->graph);
     int num_edges = igraph_ecount(this->graph);
     std::cerr << "mincut_custom.cpp: mincut being requested on " << num_nodes << " nodes and " << num_edges << " edges" << std::endl;
-    G->start_construction(num_nodes, num_edges * 2);
+    G->start_construction(num_nodes);
     for(int i = 0; i < num_nodes; i ++) {
         NodeID current_node = G->new_node();
+        G->setPartitionIndex(current_node, 0);
     }
 
     igraph_eit_t eit;
@@ -28,15 +30,24 @@ int MinCutCustom::ComputeMinCut() {
         int from_node = IGRAPH_FROM(this->graph, current_edge);
         int to_node = IGRAPH_TO(this->graph, current_edge);
         std::cerr << "mincut_custom.cpp: edge from " << from_node << " to " << to_node << std::endl;
-        G->new_edge(from_node, to_node, 1);
-        G->new_edge(to_node, from_node, 1);
+        int source_node = -1;
+        int target_node = -1;
+        if(from_node < target_node) {
+            source_node = from_node;
+            target_node = to_node;
+        } else {
+            source_node = to_node;
+            target_node = from_node;
+        }
+        G->new_edge(source_node, target_node, 1);
     }
     igraph_eit_destroy(&eit);
 
     G->finish_construction();
+    G->computeDegrees();
 
-    auto* cmc = new cactus_mincut<GraphPtr>();
-    edge_cut_size = cmc->perform_minimum_cut(G);
+    cactus_mincut<std::shared_ptr<mutable_graph>> cmc;
+    edge_cut_size = cmc.perform_minimum_cut(G);
     std::cerr << "mincut_custom.cpp: current edge cut size is " << edge_cut_size << std::endl;
 
 
