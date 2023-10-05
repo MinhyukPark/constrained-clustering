@@ -3,6 +3,7 @@
 #include "argparse.h"
 #include "constrained.h"
 #include "library.h"
+#include "mincut_global_cluster_repeat.h"
 
 
 int main(int argc, char* argv[]) {
