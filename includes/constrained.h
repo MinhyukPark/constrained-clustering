@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <random>
 #include <thread>
+#include <map>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -18,11 +19,12 @@ enum Log {info, debug, error = -1};
 
 class ConstrainedClustering {
     public:
-        ConstrainedClustering(std::string edgelist, std::string algorithm, double resolution, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), resolution(resolution), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
+        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), start_with_clustering(start_with_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
             if(this->log_level > -1) {
                 this->start_time = std::chrono::steady_clock::now();
                 this->log_file_handle.open(this->log_file);
             }
+            this->num_calls_to_log_write = 0;
         };
 
         virtual ~ConstrainedClustering() {
@@ -36,13 +38,13 @@ class ConstrainedClustering {
         void WritePartitionMap(std::map<int,int>& final_partition);
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters);
 
-        static inline void ClusterQueueToMap(std::queue<std::vector<int>>& cluster_queue, std::map<int, int>* node_id_to_cluster_id_map) {
+        static inline void ClusterQueueToMap(std::queue<std::vector<int>>& cluster_queue, std::map<int, int>& node_id_to_cluster_id_map) {
             int cluster_id = 0;
             while(!cluster_queue.empty()) {
                 std::vector<int> current_cluster = cluster_queue.front();
                 cluster_queue.pop();
                 for(size_t i = 0; i < current_cluster.size(); i ++) {
-                    (*node_id_to_cluster_id_map)[current_cluster[i]] = cluster_id;
+                    node_id_to_cluster_id_map[current_cluster[i]] = cluster_id;
                 }
                 cluster_id ++;
             }
@@ -57,7 +59,10 @@ class ConstrainedClustering {
                 igraph_integer_t current_edge = IGRAPH_EIT_GET(eit);
                 int from_node = IGRAPH_FROM(graph, current_edge);
                 int to_node = IGRAPH_TO(graph, current_edge);
-                if(node_id_to_cluster_id_map.at(from_node) != node_id_to_cluster_id_map.at(to_node)) {
+                if(node_id_to_cluster_id_map.contains(from_node) && node_id_to_cluster_id_map.contains(to_node)
+                    && (node_id_to_cluster_id_map.at(from_node) == node_id_to_cluster_id_map.at(to_node))) {
+                    // keep the edge
+                } else {
                     igraph_vector_int_push_back(&edges_to_remove, IGRAPH_EIT_GET(eit));
                 }
             }
@@ -182,8 +187,9 @@ class ConstrainedClustering {
             igraph_vector_int_destroy(&membership);
         }
 
-        static inline void RunLeidenAndUpdatePartition(std::map<int, int>& partition_map, MutableVertexPartition* partition, igraph_t* graph) {
+        static inline void RunLeidenAndUpdatePartition(std::map<int, int>& partition_map, MutableVertexPartition* partition, int seed, igraph_t* graph) {
             Optimiser o;
+            o.set_rng_seed(seed);
             o.optimise_partition(partition);
             igraph_eit_t eit;
             igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
@@ -232,11 +238,11 @@ class ConstrainedClustering {
             } else if(algorithm == "leiden-cpm") {
                 Graph leiden_graph(&graph);
                 CPMVertexPartition partition(&leiden_graph, clustering_parameter);
-                ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, &graph);
+                ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, seed, &graph);
             } else if(algorithm == "leiden-mod") {
                 Graph leiden_graph(&graph);
                 ModularityVertexPartition partition(&leiden_graph);
-                ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, &graph);
+                ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, seed, &graph);
             } else {
                 throw std::invalid_argument("GetCommunities(): Unsupported algorithm");
             }
@@ -274,43 +280,46 @@ class ConstrainedClustering {
             if(edge_cut_size == 0) {
                 return false;
             }
-            double threshold_value = 4;
-            double num_edge_in_side = 0;
-            double num_edge_out_side = 0;
-            if(edge_cut_size != 0) {
-                std::set<int> in_partition_set(in_partition.begin(), in_partition.end());
-                std::set<int> out_partition_set(out_partition.begin(), out_partition.end());
-                igraph_eit_t eit;
-                igraph_eit_create(induced_subgraph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-                for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
-                    igraph_integer_t current_edge = IGRAPH_EIT_GET(eit);
-                    int from_node = IGRAPH_FROM(induced_subgraph, current_edge);
-                    int to_node = IGRAPH_TO(induced_subgraph, current_edge);
-                    if(in_partition_set.contains(from_node) && in_partition_set.contains(to_node)) {
-                        num_edge_in_side ++;
-                    }
-                    if(out_partition_set.contains(from_node) && out_partition_set.contains(to_node)) {
-                        num_edge_out_side ++;
-                    }
-                }
-                igraph_eit_destroy(&eit);
-            }
+            /* double threshold_value = 4; */
+            /* double num_edge_in_side = 0; */
+            /* double num_edge_out_side = 0; */
+            /* if(edge_cut_size != 0) { */
+            /*     std::set<int> in_partition_set(in_partition.begin(), in_partition.end()); */
+            /*     std::set<int> out_partition_set(out_partition.begin(), out_partition.end()); */
+            /*     igraph_eit_t eit; */
+            /*     igraph_eit_create(induced_subgraph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit); */
+            /*     for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) { */
+            /*         igraph_integer_t current_edge = IGRAPH_EIT_GET(eit); */
+            /*         int from_node = IGRAPH_FROM(induced_subgraph, current_edge); */
+            /*         int to_node = IGRAPH_TO(induced_subgraph, current_edge); */
+            /*         if(in_partition_set.contains(from_node) && in_partition_set.contains(to_node)) { */
+            /*             num_edge_in_side ++; */
+            /*         } */
+            /*         if(out_partition_set.contains(from_node) && out_partition_set.contains(to_node)) { */
+            /*             num_edge_out_side ++; */
+            /*         } */
+            /*     } */
+            /*     igraph_eit_destroy(&eit); */
+            /* } */
 
-            bool edge_connectivity = (num_edge_in_side / threshold_value > edge_cut_size) && (num_edge_out_side / threshold_value > edge_cut_size);
-            bool node_connectivity = log10(in_partition.size() + out_partition.size()) > edge_cut_size;
-            return edge_connectivity && node_connectivity;
+            /* bool edge_connectivity = (num_edge_in_side / threshold_value > edge_cut_size) && (num_edge_out_side / threshold_value > edge_cut_size); */
+            bool node_connectivity = log10(in_partition.size() + out_partition.size()) < edge_cut_size;
+            /* return edge_connectivity && node_connectivity; */
+            return node_connectivity;
         }
 
     protected:
         std::string edgelist;
         std::string algorithm;
-        double resolution;
+        double clustering_parameter;
+        bool start_with_clustering;
         int num_processors;
         std::string output_file;
         std::string log_file;
         std::chrono::steady_clock::time_point start_time;
         std::ofstream log_file_handle;
         int log_level;
+        int num_calls_to_log_write;
 };
 
 #endif

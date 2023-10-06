@@ -55,6 +55,11 @@ int ConstrainedClustering::WriteToLogFile(std::string message, Log message_type)
         log_message_prefix += std::to_string(total_seconds_elapsed.count());
         log_message_prefix += "s)";
         this->log_file_handle << log_message_prefix << " " << message << '\n';
+
+        if(this->num_calls_to_log_write % 10 == 0) {
+            std::flush(this->log_file_handle);
+        }
+        this->num_calls_to_log_write ++;
     }
     return 0;
 }

@@ -14,8 +14,7 @@ int MinCutCustom::ComputeMinCut() {
     // make sure graph is connected
     // igraph maybe just always has increasing node ids starting at 0 and also is connected
     int num_nodes = igraph_vcount(this->graph);
-    /* int num_edges = igraph_ecount(this->graph); */
-    /* std::cerr << "mincut_custom.cpp: mincut being requested on " << num_nodes << " nodes and " << num_edges << " edges" << std::endl; */
+    int num_edges = igraph_ecount(this->graph);
     G->start_construction(num_nodes);
     for(int i = 0; i < num_nodes; i ++) {
         NodeID current_node = G->new_node();
