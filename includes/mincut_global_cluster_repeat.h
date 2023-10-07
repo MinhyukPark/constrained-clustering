@@ -12,9 +12,6 @@ class MinCutGlobalClusterRepeat : public ConstrainedClustering {
         static inline void MinCutWorker(igraph_t* graph) {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
-                to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() {
-                    return !MinCutGlobalClusterRepeat::to_be_mincut_clusters.empty();
-                });
                 std::vector<int> current_cluster = MinCutGlobalClusterRepeat::to_be_mincut_clusters.front();
                 MinCutGlobalClusterRepeat::to_be_mincut_clusters.pop();
                 to_be_mincut_lock.unlock();
@@ -39,25 +36,28 @@ class MinCutGlobalClusterRepeat : public ConstrainedClustering {
                 std::vector<int> out_partition = mcc.GetOutPartition();
                 bool is_well_connected = ConstrainedClustering::IsWellConnected(in_partition, out_partition, edge_cut_size, &induced_subgraph);
                 if(is_well_connected) {
-                    std::unique_lock<std::mutex> done_being_clustered_lock{MinCutGlobalClusterRepeat::done_being_clustered_mutex};
-                    MinCutGlobalClusterRepeat::done_being_clustered_clusters.push(current_cluster);
-                    done_being_clustered_lock.unlock();
+                    {
+                        std::lock_guard<std::mutex> done_being_clustered_guard(MinCutGlobalClusterRepeat::done_being_clustered_mutex);
+                        MinCutGlobalClusterRepeat::done_being_clustered_clusters.push(current_cluster);
+                    }
                 } else {
                     if(in_partition.size() > 1) {
                         for(size_t i = 0; i < in_partition.size(); i ++) {
                             in_partition[i] = VECTOR(new_id_to_old_id_map)[in_partition[i]];
                         }
-                        std::unique_lock<std::mutex> to_be_clustered_lock{MinCutGlobalClusterRepeat::to_be_clustered_mutex};
-                        MinCutGlobalClusterRepeat::to_be_clustered_clusters.push(in_partition);
-                        to_be_clustered_lock.unlock();
+                        {
+                            std::lock_guard<std::mutex> to_be_clustered_guard(MinCutGlobalClusterRepeat::to_be_clustered_mutex);
+                            MinCutGlobalClusterRepeat::to_be_clustered_clusters.push(in_partition);
+                        }
                     }
                     if(out_partition.size() > 1) {
                         for(size_t i = 0; i < out_partition.size(); i ++) {
                             out_partition[i] = VECTOR(new_id_to_old_id_map)[out_partition[i]];
                         }
-                        std::unique_lock<std::mutex> to_be_clustered_lock{MinCutGlobalClusterRepeat::to_be_clustered_mutex};
-                        MinCutGlobalClusterRepeat::to_be_clustered_clusters.push(out_partition);
-                        to_be_clustered_lock.unlock();
+                        {
+                            std::lock_guard<std::mutex> to_be_clustered_guard(MinCutGlobalClusterRepeat::to_be_clustered_mutex);
+                            MinCutGlobalClusterRepeat::to_be_clustered_clusters.push(out_partition);
+                        }
                     }
                 }
                 igraph_vector_int_destroy(&nodes_to_keep);
