@@ -4,6 +4,7 @@
 #include <algorithms/global_mincut/cactus/cactus_mincut.h>
 #include <igraph/igraph.h>
 
+
 class MinCutCustom {
     public:
         MinCutCustom(const igraph_t* graph) : graph(graph) {

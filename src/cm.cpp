@@ -7,9 +7,7 @@ int CM::main() {
     this->WriteToLogFile("Loading the initial graph" , Log::info);
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
     igraph_t graph;
-    /* igraph_t original_graph; */
     igraph_read_graph_edgelist(&graph, edgelist_file, 0, false);
-    /* igraph_copy(&original_graph, &graph); */
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
 
@@ -58,6 +56,7 @@ int CM::main() {
             thread_vector[thread_index].join();
         }
         this->WriteToLogFile(std::to_string(CM::to_be_clustered_clusters.size()) + " [connected components / clusters] to be clustered after a round of mincuts", Log::debug);
+        this->WriteToLogFile(std::to_string(CM::done_being_clustered_clusters.size()) + " [connected components / clusters] were found to be well connected", Log::debug);
         /** SECTION MinCutOnceAndCluster Each Connected Component END **/
 
         /** SECTION Check If All Clusters Are Well-Connected START **/

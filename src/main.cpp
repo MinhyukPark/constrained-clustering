@@ -105,6 +105,7 @@ int main(int argc, char* argv[]) {
         std::string log_file = mincut_global_cluster_repeat.get<std::string>("--log-file");
         int log_level = mincut_global_cluster_repeat.get<int>("--log-level") - 1; // so that enum is cleaner
         ConstrainedClustering* mcgcr = new MinCutGlobalClusterRepeat(edgelist, algorithm, resolution, start_with_clustering, num_processors, output_file, log_file, log_level);
+        random_functions::setSeed(0);
         mcgcr->main();
         delete mcgcr;
     } else if(main_program.is_subcommand_used(cm)) {
@@ -117,6 +118,7 @@ int main(int argc, char* argv[]) {
         std::string log_file = cm.get<std::string>("--log-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
         ConstrainedClustering* cm = new CM(edgelist, algorithm, resolution, start_with_clustering, num_processors, output_file, log_file, log_level);
+        random_functions::setSeed(0);
         cm->main();
         delete cm;
     }

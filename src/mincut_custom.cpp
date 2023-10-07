@@ -7,7 +7,10 @@ int MinCutCustom::ComputeMinCut() {
     cfg->threads = 1;
     cfg->save_cut = true;
     cfg->set_node_in_cut = true;
-    random_functions::setSeed(0);
+    // uncomment this if you want random seeds
+    // comment this out if you want a set seed
+    // it's unintuitive but trust me
+    /* random_functions::setSeed(0); */
     std::shared_ptr<mutable_graph> G = std::make_shared<mutable_graph>();
 
     // make input output mapping of node ids

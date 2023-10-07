@@ -41,9 +41,6 @@ class CM : public ConstrainedClustering {
         static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter) {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
-                /* to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() { */
-                /*     return !CM::to_be_mincut_clusters.empty(); */
-                /* }); */
                 std::vector<int> current_cluster = CM::to_be_mincut_clusters.front();
                 CM::to_be_mincut_clusters.pop();
                 to_be_mincut_lock.unlock();
@@ -51,7 +48,6 @@ class CM : public ConstrainedClustering {
                     // done with work!
                     return;
                 }
-                std::cerr << "Checking mincut on a cluster" << std::endl;
                 igraph_vector_int_t nodes_to_keep;
                 igraph_vector_int_t new_id_to_old_id_map;
                 igraph_vector_int_init(&new_id_to_old_id_map, current_cluster.size());
@@ -66,22 +62,12 @@ class CM : public ConstrainedClustering {
                 std::vector<int> in_partition = mcc.GetInPartition();
                 std::vector<int> out_partition = mcc.GetOutPartition();
                 bool is_well_connected = ConstrainedClustering::IsWellConnected(in_partition, out_partition, edge_cut_size, &induced_subgraph);
-                std::cerr << "mincut size was " << std::to_string(edge_cut_size) << std::endl;
                 if(is_well_connected) {
-                    std::cerr << "cluster is well connected" << std::endl;
                     {
                         std::lock_guard<std::mutex> done_being_clustered_guard(CM::done_being_clustered_mutex);
                         CM::done_being_clustered_clusters.push(current_cluster);
                     }
                 } else {
-                    std::cerr << "cluster is not well connected" << std::endl;
-                    std::cerr << "split into " << std::to_string(in_partition.size()) << " and " << std::to_string(out_partition.size()) << std::endl;
-                    /* for(size_t i = 0; i < in_partition.size(); i ++) { */
-                    /*     in_partition[i] = VECTOR(new_id_to_old_id_map)[in_partition[i]]; */
-                    /* } */
-                    /* for(size_t i = 0; i < out_partition.size(); i ++) { */
-                    /*     out_partition[i] = VECTOR(new_id_to_old_id_map)[out_partition[i]]; */
-                    /* } */
                     if(in_partition.size() > 1) {
                         std::vector<std::vector<int>> in_clusters = CM::RunClusterOnPartition(&induced_subgraph, algorithm, seed, clustering_parameter, in_partition);
                         {
