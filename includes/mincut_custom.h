@@ -6,7 +6,7 @@
 
 class MinCutCustom {
     public:
-        MinCutCustom(igraph_t* graph) : graph(graph) {
+        MinCutCustom(const igraph_t* graph) : graph(graph) {
         };
         int ComputeMinCut();
         const std::vector<int>& GetInPartition() const;

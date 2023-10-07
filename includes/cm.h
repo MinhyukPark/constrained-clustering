@@ -9,7 +9,7 @@ class CM : public ConstrainedClustering {
         };
         int main() override;
 
-        static inline std::vector<std::vector<int>> RunClusterOnPartition(igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, std::vector<int>& partition) {
+        static inline std::vector<std::vector<int>> RunClusterOnPartition(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, std::vector<int>& partition) {
             std::vector<std::vector<int>> cluster_vectors;
             std::map<int, std::vector<int>> cluster_map;
             igraph_vector_int_t nodes_to_keep;
@@ -38,12 +38,12 @@ class CM : public ConstrainedClustering {
             return cluster_vectors;
         }
 
-        static inline void MinCutOrClusterWorker(igraph_t* graph, std::string algorithm, int seed, double clustering_parameter) {
+        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter) {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
-                to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() {
-                    return !CM::to_be_mincut_clusters.empty();
-                });
+                /* to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() { */
+                /*     return !CM::to_be_mincut_clusters.empty(); */
+                /* }); */
                 std::vector<int> current_cluster = CM::to_be_mincut_clusters.front();
                 CM::to_be_mincut_clusters.pop();
                 to_be_mincut_lock.unlock();
@@ -51,6 +51,7 @@ class CM : public ConstrainedClustering {
                     // done with work!
                     return;
                 }
+                std::cerr << "Checking mincut on a cluster" << std::endl;
                 igraph_vector_int_t nodes_to_keep;
                 igraph_vector_int_t new_id_to_old_id_map;
                 igraph_vector_int_init(&new_id_to_old_id_map, current_cluster.size());
@@ -65,11 +66,16 @@ class CM : public ConstrainedClustering {
                 std::vector<int> in_partition = mcc.GetInPartition();
                 std::vector<int> out_partition = mcc.GetOutPartition();
                 bool is_well_connected = ConstrainedClustering::IsWellConnected(in_partition, out_partition, edge_cut_size, &induced_subgraph);
+                std::cerr << "mincut size was " << std::to_string(edge_cut_size) << std::endl;
                 if(is_well_connected) {
-                    std::unique_lock<std::mutex> done_being_clustered_lock{CM::done_being_clustered_mutex};
-                    CM::done_being_clustered_clusters.push(current_cluster);
-                    done_being_clustered_lock.unlock();
+                    std::cerr << "cluster is well connected" << std::endl;
+                    {
+                        std::lock_guard<std::mutex> done_being_clustered_guard(CM::done_being_clustered_mutex);
+                        CM::done_being_clustered_clusters.push(current_cluster);
+                    }
                 } else {
+                    std::cerr << "cluster is not well connected" << std::endl;
+                    std::cerr << "split into " << std::to_string(in_partition.size()) << " and " << std::to_string(out_partition.size()) << std::endl;
                     /* for(size_t i = 0; i < in_partition.size(); i ++) { */
                     /*     in_partition[i] = VECTOR(new_id_to_old_id_map)[in_partition[i]]; */
                     /* } */
@@ -78,27 +84,29 @@ class CM : public ConstrainedClustering {
                     /* } */
                     if(in_partition.size() > 1) {
                         std::vector<std::vector<int>> in_clusters = CM::RunClusterOnPartition(&induced_subgraph, algorithm, seed, clustering_parameter, in_partition);
-                        std::unique_lock<std::mutex> to_be_clustered_lock{CM::to_be_clustered_mutex};
-                        for(size_t i = 0; i < in_clusters.size(); i ++) {
-                            std::vector<int> translated_in_clusters;
-                            for(size_t j = 0; j < in_clusters[i].size(); j ++) {
-                                translated_in_clusters.push_back(VECTOR(new_id_to_old_id_map)[in_clusters[i][j]]);
+                        {
+                            std::lock_guard<std::mutex> to_be_clustered_guard(CM::to_be_clustered_mutex);
+                            for(size_t i = 0; i < in_clusters.size(); i ++) {
+                                std::vector<int> translated_in_clusters;
+                                for(size_t j = 0; j < in_clusters[i].size(); j ++) {
+                                    translated_in_clusters.push_back(VECTOR(new_id_to_old_id_map)[in_clusters[i][j]]);
+                                }
+                                CM::to_be_clustered_clusters.push(translated_in_clusters);
                             }
-                            CM::to_be_clustered_clusters.push(translated_in_clusters);
                         }
-                        to_be_clustered_lock.unlock();
                     }
                     if(out_partition.size() > 1) {
                         std::vector<std::vector<int>> out_clusters = CM::RunClusterOnPartition(&induced_subgraph, algorithm, seed, clustering_parameter, out_partition);
-                        std::unique_lock<std::mutex> to_be_clustered_lock{CM::to_be_clustered_mutex};
-                        for(size_t i = 0; i < out_clusters.size(); i ++) {
-                            std::vector<int> translated_out_clusters;
-                            for(size_t j = 0; j < out_clusters[i].size(); j ++) {
-                                translated_out_clusters.push_back(VECTOR(new_id_to_old_id_map)[out_clusters[i][j]]);
+                        {
+                            std::lock_guard<std::mutex> to_be_clustered_guard(CM::to_be_clustered_mutex);
+                            for(size_t i = 0; i < out_clusters.size(); i ++) {
+                                std::vector<int> translated_out_clusters;
+                                for(size_t j = 0; j < out_clusters[i].size(); j ++) {
+                                    translated_out_clusters.push_back(VECTOR(new_id_to_old_id_map)[out_clusters[i][j]]);
+                                }
+                                CM::to_be_clustered_clusters.push(translated_out_clusters);
                             }
-                            CM::to_be_clustered_clusters.push(translated_out_clusters);
                         }
-                        to_be_clustered_lock.unlock();
                     }
                 }
                 igraph_vector_int_destroy(&nodes_to_keep);

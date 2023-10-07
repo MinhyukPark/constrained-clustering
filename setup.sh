@@ -16,7 +16,7 @@ git clone https://github.com/igraph/igraph.git
 cd igraph
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=${external_libs_full_path}
+cmake .. -DCMAKE_INSTALL_PREFIX=${external_libs_full_path} -DIGRAPH_ENABLE_TLS=ON -DIGRAPH_ENABLE_LTO=ON
 cmake --build .
 cmake --install .
 
