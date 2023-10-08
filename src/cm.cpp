@@ -29,7 +29,7 @@ int CM::main() {
         CM::to_be_mincut_clusters.push(connected_components_vector[i]);
     }
     /** SECTION Get Connected Components END **/
-
+    int previous_done_being_clustered_size = 0;
     while (true) {
         this->WriteToLogFile("Iteration number: " + std::to_string(iter_count), Log::debug);
         if(iter_count % 10 == 0) {
@@ -56,7 +56,8 @@ int CM::main() {
             thread_vector[thread_index].join();
         }
         this->WriteToLogFile(std::to_string(CM::to_be_clustered_clusters.size()) + " [connected components / clusters] to be clustered after a round of mincuts", Log::debug);
-        this->WriteToLogFile(std::to_string(CM::done_being_clustered_clusters.size()) + " [connected components / clusters] were found to be well connected", Log::debug);
+        this->WriteToLogFile(std::to_string(CM::done_being_clustered_clusters.size() - previous_done_being_clustered_size) + " [connected components / clusters] were found to be well connected", Log::debug);
+        previous_done_being_clustered_size = CM::done_being_clustered_clusters.size();
         /** SECTION MinCutOnceAndCluster Each Connected Component END **/
 
         /** SECTION Check If All Clusters Are Well-Connected START **/

@@ -50,6 +50,7 @@ class ConstrainedClustering {
             }
         }
 
+        // currently keeps only those edges that go from within these clusters defined in the map
         static inline void RemoveInterClusterEdges(igraph_t* graph, const std::map<int,int>& node_id_to_cluster_id_map) {
             igraph_vector_int_t edges_to_remove;
             igraph_vector_int_init(&edges_to_remove, 0);
