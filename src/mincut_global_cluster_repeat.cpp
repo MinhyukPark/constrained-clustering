@@ -14,7 +14,7 @@ int MinCutGlobalClusterRepeat::main() {
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
 
-    int before_mincut_number_of_clusters = -1;
+    /* int before_mincut_number_of_clusters = -1; */
     int after_mincut_number_of_clusters = -2;
     int iter_count = 0;
 
@@ -41,7 +41,7 @@ int MinCutGlobalClusterRepeat::main() {
 
         /** SECTION MinCut Each Connected Component START **/
         this->WriteToLogFile(std::to_string(MinCutGlobalClusterRepeat::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut", Log::debug);
-        before_mincut_number_of_clusters = MinCutGlobalClusterRepeat::to_be_mincut_clusters.size();
+        /* before_mincut_number_of_clusters = MinCutGlobalClusterRepeat::to_be_mincut_clusters.size(); */
         /* if a thread gets a cluster {-1}, then they know processing is done and they can stop working */
         for(int i = 0; i < this->num_processors; i ++) {
             MinCutGlobalClusterRepeat::to_be_mincut_clusters.push({-1});

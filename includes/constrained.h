@@ -9,6 +9,7 @@
 #include <random>
 #include <thread>
 #include <map>
+#include <fstream>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -19,7 +20,7 @@ enum Log {info, debug, error = -1};
 
 class ConstrainedClustering {
     public:
-        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), start_with_clustering(start_with_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
+        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), start_with_clustering(start_with_clustering), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
             if(this->log_level > -1) {
                 this->start_time = std::chrono::steady_clock::now();
                 this->log_file_handle.open(this->log_file);
@@ -37,6 +38,17 @@ class ConstrainedClustering {
         int WriteToLogFile(std::string message, Log message_type);
         void WritePartitionMap(std::map<int,int>& final_partition);
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters);
+
+        static inline std::map<int, int> ReadCommunities(std::string existing_clustering) {
+            std::map<int, int> partition_map;
+            std::ifstream existing_clustering_file(existing_clustering);
+            int node_id = -1;
+            int cluster_id = -1;
+            while (existing_clustering_file >> node_id >> cluster_id) {
+                partition_map[node_id] = cluster_id;
+            }
+            return partition_map;
+        }
 
         static inline void ClusterQueueToMap(std::queue<std::vector<int>>& cluster_queue, std::map<int, int>& node_id_to_cluster_id_map) {
             int cluster_id = 0;
@@ -188,10 +200,12 @@ class ConstrainedClustering {
             igraph_vector_int_destroy(&membership);
         }
 
-        static inline void RunLeidenAndUpdatePartition(std::map<int, int>& partition_map, MutableVertexPartition* partition, int seed, igraph_t* graph) {
+        static inline void RunLeidenAndUpdatePartition(std::map<int, int>& partition_map, MutableVertexPartition* partition, int seed, igraph_t* graph, int num_iter= 2) {
             Optimiser o;
             o.set_rng_seed(seed);
-            o.optimise_partition(partition);
+            for(int i = 0; i < num_iter; i ++) {
+                o.optimise_partition(partition);
+            }
             igraph_eit_t eit;
             igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
             std::set<int> visited;
@@ -314,6 +328,7 @@ class ConstrainedClustering {
         std::string algorithm;
         double clustering_parameter;
         bool start_with_clustering;
+        std::string existing_clustering;
         int num_processors;
         std::string output_file;
         std::string log_file;

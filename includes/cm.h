@@ -5,7 +5,7 @@
 
 class CM : public ConstrainedClustering {
     public:
-        CM(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, start_with_clustering, num_processors, output_file, log_file, log_level) {
+        CM(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, start_with_clustering, existing_clustering, num_processors, output_file, log_file, log_level) {
         };
         int main() override;
 
@@ -68,7 +68,7 @@ class CM : public ConstrainedClustering {
                 std::map<int, int> new_id_to_old_id_map;
                 std::map<int, int> newnew_id_to_old_id_map;
                 std::map<int, int> old_id_to_new_id_map;
-                for(size_t i = 0; i < igraph_vector_int_size(&new_id_to_old_id_vector_map); i ++) {
+                for(int i = 0; i < igraph_vector_int_size(&new_id_to_old_id_vector_map); i ++) {
                     new_id_to_old_id_map[i] = VECTOR(new_id_to_old_id_vector_map)[i];
                     old_id_to_new_id_map[VECTOR(new_id_to_old_id_vector_map)[i]] = i;
                 }
@@ -83,7 +83,6 @@ class CM : public ConstrainedClustering {
                         in_partition = in_partition_candidate;
                         out_partition = out_partition_candidate;
                     } else {
-                        igraph_integer_t node_to_remove_index = -1;
                         int node_to_remove = -1;
                         if(in_partition_candidate.size() == 1) {
                             igraph_vector_int_t newnew_id_to_new_id_map;
@@ -91,7 +90,7 @@ class CM : public ConstrainedClustering {
                             node_to_remove = in_partition_candidate.at(0);
                             current_cluster_set.erase(new_id_to_old_id_map[node_to_remove]);
                             igraph_delete_vertices_idx(&induced_subgraph, igraph_vss_1(node_to_remove), NULL, &newnew_id_to_new_id_map);
-                            for(size_t i = 0; i < igraph_vector_int_size(&newnew_id_to_new_id_map); i ++) {
+                            for(int i = 0; i < igraph_vector_int_size(&newnew_id_to_new_id_map); i ++) {
                                 int newnew_id = i;
                                 int new_id = VECTOR(newnew_id_to_new_id_map)[newnew_id];
                                 int old_id = new_id_to_old_id_map[new_id];
@@ -108,7 +107,7 @@ class CM : public ConstrainedClustering {
                             node_to_remove = out_partition_candidate.at(0);
                             current_cluster_set.erase(new_id_to_old_id_map[node_to_remove]);
                             igraph_delete_vertices_idx(&induced_subgraph, igraph_vss_1(node_to_remove), NULL, &newnew_id_to_new_id_map);
-                            for(size_t i = 0; i < igraph_vector_int_size(&newnew_id_to_new_id_map); i ++) {
+                            for(int i = 0; i < igraph_vector_int_size(&newnew_id_to_new_id_map); i ++) {
                                 int newnew_id = i;
                                 int new_id = VECTOR(newnew_id_to_new_id_map)[newnew_id];
                                 int old_id = new_id_to_old_id_map[new_id];

@@ -11,7 +11,7 @@ int CM::main() {
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
 
-    int before_mincut_number_of_clusters = -1;
+    /* int before_mincut_number_of_clusters = -1; */
     int after_mincut_number_of_clusters = -2;
     int iter_count = 0;
 
@@ -19,6 +19,9 @@ int CM::main() {
         /* int seed = uni(rng); */
         int seed = 0;
         std::map<int, int> node_id_to_cluster_id_map = ConstrainedClustering::GetCommunities("", this->algorithm, seed, this->clustering_parameter, &graph);
+        ConstrainedClustering::RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
+    } else if(this->existing_clustering != "") {
+        std::map<int, int> node_id_to_cluster_id_map = ConstrainedClustering::ReadCommunities(this->existing_clustering);
         ConstrainedClustering::RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
     }
 
@@ -38,7 +41,7 @@ int CM::main() {
 
         /** SECTION MinCutOnceAndCluster Each Connected Component START **/
         this->WriteToLogFile(std::to_string(CM::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut", Log::debug);
-        before_mincut_number_of_clusters = CM::to_be_mincut_clusters.size();
+        /* before_mincut_number_of_clusters = CM::to_be_mincut_clusters.size(); */
         /* if a thread gets a cluster {-1}, then they know processing is done and they can stop working */
         for(int i = 0; i < this->num_processors; i ++) {
             CM::to_be_mincut_clusters.push({-1});
