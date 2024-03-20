@@ -291,6 +291,10 @@ class ConstrainedClustering {
             return connected_components_vector;
         }
 
+        static inline bool IsConnected(int edge_cut_size) {
+            return edge_cut_size >= 1;
+        }
+
         static inline bool IsWellConnected(const std::vector<int>& in_partition, const std::vector<int>& out_partition, int edge_cut_size, const igraph_t* induced_subgraph) {
             if(edge_cut_size == 0) {
                 return false;
