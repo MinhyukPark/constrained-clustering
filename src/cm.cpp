@@ -7,9 +7,13 @@ int CM::main() {
     this->WriteToLogFile("Loading the initial graph" , Log::info);
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
     igraph_t graph;
-    igraph_read_graph_edgelist(&graph, edgelist_file, 0, false);
+    igraph_set_attribute_table(&igraph_cattribute_table);
+    igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_YES, IGRAPH_UNDIRECTED);
+    /* igraph_read_graph_edgelist(&graph, edgelist_file, 0, false); */
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
+    /* std::cerr << EAN(&graph, "weight", 0) << std::endl; */
+
 
     /* int before_mincut_number_of_clusters = -1; */
     int after_mincut_number_of_clusters = -2;
@@ -80,9 +84,9 @@ int CM::main() {
         iter_count ++;
     }
 
-    igraph_destroy(&graph);
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
-    this->WriteClusterQueue(CM::done_being_clustered_clusters);
+    this->WriteClusterQueue(CM::done_being_clustered_clusters, &graph);
+    igraph_destroy(&graph);
     return 0;
 }

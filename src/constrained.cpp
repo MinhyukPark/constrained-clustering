@@ -1,6 +1,6 @@
 #include "constrained.h"
 
-void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue) {
+void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue, igraph_t* graph) {
     std::ofstream clustering_output(this->output_file);
     int current_cluster_id = 0;
     this->WriteToLogFile("final clusters:", Log::debug);
@@ -10,7 +10,7 @@ void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& clus
         this->WriteToLogFile("new cluster", Log::debug);
         for(size_t i = 0; i < current_cluster.size(); i ++) {
             this->WriteToLogFile(std::to_string(current_cluster[i]), Log::debug);
-            clustering_output << current_cluster[i] << " " << current_cluster_id << '\n';
+            clustering_output << VAS(graph, "name", current_cluster[i]) << " " << current_cluster_id << '\n';
         }
         current_cluster_id ++;
     }
