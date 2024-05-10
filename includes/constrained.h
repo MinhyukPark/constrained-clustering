@@ -339,7 +339,7 @@ class ConstrainedClustering {
             /* } */
 
             /* bool edge_connectivity = (num_edge_in_side / threshold_value > edge_cut_size) && (num_edge_out_side / threshold_value > edge_cut_size); */
-            std::cerr << edge_cut_size << std::endl;
+            /* std::cerr << edge_cut_size << std::endl; */
             bool node_connectivity = log10(in_partition.size() + out_partition.size()) < edge_cut_size;
             /* return edge_connectivity && node_connectivity; */
             return node_connectivity;
