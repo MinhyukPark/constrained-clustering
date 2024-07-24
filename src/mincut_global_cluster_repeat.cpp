@@ -9,7 +9,9 @@ int MinCutGlobalClusterRepeat::main() {
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
     igraph_t graph;
     /* igraph_t original_graph; */
-    igraph_read_graph_edgelist(&graph, edgelist_file, 0, false);
+    /* igraph_read_graph_edgelist(&graph, edgelist_file, 0, false); */
+    igraph_set_attribute_table(&igraph_cattribute_table);
+    igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_IF_PRESENT, IGRAPH_UNDIRECTED);
     /* igraph_copy(&original_graph, &graph); */
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
@@ -83,9 +85,9 @@ int MinCutGlobalClusterRepeat::main() {
         iter_count ++;
     }
 
-    igraph_destroy(&graph);
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
-    this->WriteClusterQueue(MinCutGlobalClusterRepeat::done_being_clustered_clusters);
+    this->WriteClusterQueue(MinCutGlobalClusterRepeat::done_being_clustered_clusters, &graph);
+    igraph_destroy(&graph);
     return 0;
 }

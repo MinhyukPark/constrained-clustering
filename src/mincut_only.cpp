@@ -4,7 +4,9 @@ int MincutOnly::main() {
     this->WriteToLogFile("Loading the initial graph" , Log::info);
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
     igraph_t graph;
-    igraph_read_graph_edgelist(&graph, edgelist_file, 0, false);
+    /* igraph_read_graph_edgelist(&graph, edgelist_file, 0, false); */
+    igraph_set_attribute_table(&igraph_cattribute_table);
+    igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_IF_PRESENT, IGRAPH_UNDIRECTED);
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
 
@@ -63,9 +65,9 @@ int MincutOnly::main() {
         iter_count ++;
     }
 
-    igraph_destroy(&graph);
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
-    this->WriteClusterQueue(MincutOnly::done_being_mincut_clusters);
+    this->WriteClusterQueue(MincutOnly::done_being_mincut_clusters, &graph);
+    igraph_destroy(&graph);
     return 0;
 }

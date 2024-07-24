@@ -39,7 +39,7 @@ int MinCutCustom::ComputeMinCut() {
             source_node = to_node;
             target_node = from_node;
         }
-        G->new_edge(source_node, target_node, 1);
+        G->new_edge(source_node, target_node, EAN(this->graph, "weight", current_edge));
     }
     igraph_eit_destroy(&eit);
 
