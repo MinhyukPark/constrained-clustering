@@ -8,7 +8,10 @@ int CM::main() {
     FILE* edgelist_file = fopen(this->edgelist.c_str(), "r");
     igraph_t graph;
     igraph_set_attribute_table(&igraph_cattribute_table);
-    igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_YES, IGRAPH_UNDIRECTED);
+    igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_IF_PRESENT, IGRAPH_UNDIRECTED);
+    if(!igraph_cattribute_has_attr(&graph, IGRAPH_ATTRIBUTE_EDGE, "weight")) {
+        SetIgraphAllEdgesWeight(&graph, 1.0);
+    }
     /* igraph_read_graph_edgelist(&graph, edgelist_file, 0, false); */
     fclose(edgelist_file);
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);

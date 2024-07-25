@@ -257,6 +257,7 @@ class ConstrainedClustering {
                 igraph_eit_create(&graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
                 for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
                     double current_edge_weight = EAN(&graph, "weight", IGRAPH_EIT_GET(eit));
+                    /* std::cerr << "current edge weight: " << current_edge_weight << std::endl; */
                     edge_weights.push_back(current_edge_weight);
                 }
                 igraph_eit_destroy(&eit);
@@ -294,8 +295,13 @@ class ConstrainedClustering {
             igraph_vector_int_init(&membership_size_vector, 0);
             igraph_integer_t number_of_components;
             igraph_connected_components(graph_ptr, &component_id_vector, &membership_size_vector, &number_of_components, IGRAPH_WEAK);
+            /* std::cerr << "num con comp: " << number_of_components << std::endl; */
             for(int node_id = 0; node_id < igraph_vcount(graph_ptr); node_id ++) {
                 int current_component_id = VECTOR(component_id_vector)[node_id];
+                /* std::cerr << "component id: " << current_component_id << std::endl; */
+                /* std::cerr << "component size: " << VECTOR(membership_size_vector)[current_component_id] << std::endl; */
+                /* std::cerr << "graph node id: " << node_id << std::endl; */
+                /* std::cerr << "original node id: " << VAS(graph_ptr, "name", node_id) << std::endl; */
                 if(VECTOR(membership_size_vector)[current_component_id] > 1) {
                     component_id_to_member_vector_map[current_component_id].push_back(node_id);
                 }
