@@ -1,7 +1,10 @@
 # Constrained clustering
 
 
-## CM
+## Recommened CM command
+```
+./constrained_clustering CM --edgelist <tab separated edgelist network> --algorithm <choose from leiden-cpm, leiden-mod, louvain> --resolution <only supply when algorithm is leiden-cpm. Floating point value> --start-with-clustering --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1
+```
 
 
 This process repeats until we detect that after step 1 all clusters are well-connected and there are no mincuts to be made.
