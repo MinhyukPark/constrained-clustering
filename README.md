@@ -2,12 +2,11 @@
 
 
 ## Recommened CM command
+CM starts with a clustering on the entire graph then processes each cluster one by one. For each cluster, the size of a mincut is computed and determined whether it fits the connectivity criterion or not. This is by default log base 10 of n where n is the size of the cluster. If the size of a mincut is greater than the threshold, then the cluster is considered well-connected. Otherwise, the cluster is split at the mincut and both sides of the mincut get clustered by the input clustering algorithm.
 ```
 ./constrained_clustering CM --edgelist <tab separated edgelist network> --algorithm <choose from leiden-cpm, leiden-mod, louvain> --resolution <only supply when algorithm is leiden-cpm. Floating point value> --start-with-clustering --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1
 ```
 
-
-This process repeats until we detect that after step 1 all clusters are well-connected and there are no mincuts to be made.
 
 
 ## Environment setup
