@@ -50,6 +50,7 @@ class MincutOnly : public ConstrainedClustering {
                     // done with work!
                     return;
                 }
+                /* std::cerr << "current cluster size: " << current_cluster.size() << std::endl; */
                 igraph_vector_int_t nodes_to_keep;
                 igraph_vector_int_t new_id_to_old_id_map;
                 igraph_vector_int_init(&new_id_to_old_id_map, current_cluster.size());
@@ -61,6 +62,16 @@ class MincutOnly : public ConstrainedClustering {
                 // technically could just pass in the nodes and edges info directly by iterating through the edges and checking if it's inter vs intracluster
                 // likely not too much of a memory or time overhead
                 igraph_induced_subgraph_map(graph, &induced_subgraph, igraph_vss_vector(&nodes_to_keep), IGRAPH_SUBGRAPH_CREATE_FROM_SCRATCH, NULL, &new_id_to_old_id_map);
+
+                /* igraph_vector_int_t node_degrees; */
+                /* igraph_vector_int_init(&node_degrees, 0); */
+                /* igraph_degree(induced_subgraph, node_degrees, igraph_vss_vector(&nodes_to_keep), IGRAPH_ALL, IGRAPH_NO_LOOPS); */
+                /* for(size_t i = 0; i < ; i ++) { */
+                /*     VECTOR(nodes_to_keep)[i] = current_cluster[i]; */
+                /* } */
+                /* while(!ConstrainedClustering::IsWellConnected */
+
+                /* SetIgraphAllEdgesWeight(&induced_subgraph, 1.0); */
                 MinCutCustom mcc(&induced_subgraph);
                 int edge_cut_size = mcc.ComputeMinCut();
                 std::vector<int> in_partition = mcc.GetInPartition();

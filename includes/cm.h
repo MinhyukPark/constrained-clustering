@@ -5,7 +5,7 @@
 
 class CM : public ConstrainedClustering {
     public:
-        CM(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, start_with_clustering, existing_clustering, num_processors, output_file, log_file, log_level) {
+        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level) {
         };
         int main() override;
 

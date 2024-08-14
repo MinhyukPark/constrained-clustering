@@ -73,10 +73,6 @@ int main(int argc, char* argv[]) {
         .default_value(double(0.01))
         .help("Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm")
         .scan<'f', double>();
-    cm.add_argument("--start-with-clustering")
-        .default_value(false)
-        .implicit_value(true)
-        .help("Whether to start with a run of the clustering algorithm or stick with mincut starts");
     cm.add_argument("--existing-clustering")
         .default_value("")
         .help("Existing clustering file");
@@ -99,7 +95,7 @@ int main(int argc, char* argv[]) {
         .required()
         .help("Network edge-list file");
     mincut_only.add_argument("--existing-clustering")
-        .default_value("")
+        .required()
         .help("Existing clustering file");
     mincut_only.add_argument("--num-processors")
         .default_value(int(1))
@@ -149,13 +145,12 @@ int main(int argc, char* argv[]) {
         std::string edgelist = cm.get<std::string>("--edgelist");
         std::string algorithm = cm.get<std::string>("--algorithm");
         double resolution = cm.get<double>("--resolution");
-        bool start_with_clustering = cm.get<bool>("--start-with-clustering");
         std::string existing_clustering = cm.get<std::string>("--existing-clustering");
         int num_processors = cm.get<int>("--num-processors");
         std::string output_file = cm.get<std::string>("--output-file");
         std::string log_file = cm.get<std::string>("--log-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
-        ConstrainedClustering* cm = new CM(edgelist, algorithm, resolution, start_with_clustering, existing_clustering, num_processors, output_file, log_file, log_level);
+        ConstrainedClustering* cm = new CM(edgelist, algorithm, resolution, existing_clustering, num_processors, output_file, log_file, log_level);
         random_functions::setSeed(0);
         cm->main();
         delete cm;

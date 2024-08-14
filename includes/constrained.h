@@ -20,7 +20,7 @@ enum Log {info, debug, error = -1};
 
 class ConstrainedClustering {
     public:
-        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, bool start_with_clustering, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), start_with_clustering(start_with_clustering), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
+        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
             if(this->log_level > -1) {
                 this->start_time = std::chrono::steady_clock::now();
                 this->log_file_handle.open(this->log_file);
@@ -38,6 +38,33 @@ class ConstrainedClustering {
         int WriteToLogFile(std::string message, Log message_type);
         void WritePartitionMap(std::map<int,int>& final_partition);
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph);
+
+        static inline std::map<std::string, int> GetOriginalToNewIdMap(igraph_t* graph) {
+            std::map<std::string, int> original_to_new_id_map;
+            /* igraph_vit_t vit; */
+            /* igraph_vit_create(graph, igraph_vss_all(), &vit); */
+            /* for(; !IGRAPH_VIT_END(vit); IGRAPH_VIT_NEXT(vit)) { */
+            /*     igraph_integer_t current_node = IGRAPH_VIT_GET(vit); */
+            /*     original_to_new_id_map[VAS(graph, "name", current_node)] = current_node; */
+            /* } */
+            /* igraph_vit_destroy(&vit); */
+            for(int node_id = 0; node_id < igraph_vcount(graph); node_id ++) {
+                original_to_new_id_map[VAS(graph, "name", node_id)] = node_id;
+            }
+            return original_to_new_id_map;
+        }
+
+        static inline std::map<int, int> ReadCommunities(const std::map<std::string, int>& original_to_new_id_map, std::string existing_clustering) {
+            std::map<int, int> partition_map;
+            std::ifstream existing_clustering_file(existing_clustering);
+            std::string node_id;
+            int cluster_id = -1;
+            while (existing_clustering_file >> node_id >> cluster_id) {
+                int new_node_id = original_to_new_id_map.at(node_id);
+                partition_map[new_node_id] = cluster_id;
+            }
+            return partition_map;
+        }
 
         static inline std::map<int, int> ReadCommunities(std::string existing_clustering) {
             std::map<int, int> partition_map;
@@ -77,6 +104,12 @@ class ConstrainedClustering {
                     // keep the edge
                 } else {
                     igraph_vector_int_push_back(&edges_to_remove, IGRAPH_EIT_GET(eit));
+                    /* std::cerr << "removing edge " << from_node << "-" << to_node << std::endl; */
+                    /* if(node_id_to_cluster_id_map.contains(from_node) && node_id_to_cluster_id_map.contains(to_node)) { */
+                        /* std::cerr << VAS(graph, "name", from_node) << " in cluster " << node_id_to_cluster_id_map.at(from_node) << " and " << VAS(graph, "name", to_node) << " in cluster " << node_id_to_cluster_id_map.at(to_node) << std::endl; */
+                    /* } else { */
+                    /*     std::cerr << "one of the end points not in any clusters" << std::endl; */
+                    /* } */
                 }
             }
             igraph_es_t es;
@@ -318,6 +351,12 @@ class ConstrainedClustering {
             return edge_cut_size >= 1;
         }
 
+        static inline bool IsWellConnected(int in_partition_size, int out_partition_size, int edge_cut_size) {
+            bool node_connectivity = log10(in_partition_size + out_partition_size) < edge_cut_size;
+            /* return edge_connectivity && node_connectivity; */
+            return node_connectivity;
+        }
+
         static inline bool IsWellConnected(const std::vector<int>& in_partition, const std::vector<int>& out_partition, int edge_cut_size, const igraph_t* induced_subgraph) {
             if(edge_cut_size == 0) {
                 return false;
@@ -355,7 +394,6 @@ class ConstrainedClustering {
         std::string edgelist;
         std::string algorithm;
         double clustering_parameter;
-        bool start_with_clustering;
         std::string existing_clustering;
         int num_processors;
         std::string output_file;
