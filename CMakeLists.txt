@@ -37,7 +37,6 @@ else()
     set(SOURCE_MAIN ${CMAKE_SOURCE_DIR}/src/main.cpp)
     set(SOURCE_INTERNAL_LIBS
         ${CMAKE_SOURCE_DIR}/src/constrained.cpp
-        ${CMAKE_SOURCE_DIR}/src/mincut_global_cluster_repeat.cpp
         ${CMAKE_SOURCE_DIR}/src/cm.cpp
         ${CMAKE_SOURCE_DIR}/src/mincut_only.cpp
         ${CMAKE_SOURCE_DIR}/src/mincut_custom.cpp

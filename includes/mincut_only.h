@@ -7,7 +7,7 @@ enum ConnectednessCriterion {Simple, Well};
 
 class MincutOnly : public ConstrainedClustering {
     public:
-        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, ConnectednessCriterion connectedness_criterion, int log_level) : ConstrainedClustering(edgelist, "", -1, false, existing_clustering, num_processors, output_file, log_file, log_level), connectedness_criterion(connectedness_criterion) {
+        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, ConnectednessCriterion connectedness_criterion, int log_level) : ConstrainedClustering(edgelist, "", -1, existing_clustering, num_processors, output_file, log_file, log_level), connectedness_criterion(connectedness_criterion) {
         };
         int main() override;
 
