@@ -44,11 +44,11 @@ int MincutOnly::main() {
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut", Log::debug);
             before_mincut_number_of_clusters = MincutOnly::to_be_mincut_clusters.size();
             /* if a thread gets a cluster {-1}, then they know processing is done and they can stop working */
-            for(int i = 0; i < this->num_processors; i ++) {
-                MincutOnly::to_be_mincut_clusters.push({-1});
-            }
             if(before_mincut_number_of_clusters > 1) {
                 /* start the threads */
+                for(int i = 0; i < this->num_processors; i ++) {
+                    MincutOnly::to_be_mincut_clusters.push({-1});
+                }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
                     thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, this->connectedness_criterion));
@@ -59,6 +59,7 @@ int MincutOnly::main() {
                     thread_vector[thread_index].join();
                 }
             } else {
+                MincutOnly::to_be_mincut_clusters.push({-1});
                 MincutOnly::MinCutWorker(&graph, this->connectedness_criterion);
             }
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut after a round of mincuts", Log::debug);
