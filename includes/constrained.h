@@ -60,8 +60,10 @@ class ConstrainedClustering {
             std::string node_id;
             int cluster_id = -1;
             while (existing_clustering_file >> node_id >> cluster_id) {
-                int new_node_id = original_to_new_id_map.at(node_id);
-                partition_map[new_node_id] = cluster_id;
+                if(original_to_new_id_map.contains(node_id)) {
+                    int new_node_id = original_to_new_id_map.at(node_id);
+                    partition_map[new_node_id] = cluster_id;
+                }
             }
             return partition_map;
         }

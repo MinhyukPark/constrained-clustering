@@ -46,7 +46,7 @@ class MincutOnly : public ConstrainedClustering {
                 std::vector<int> current_cluster = MincutOnly::to_be_mincut_clusters.front();
                 MincutOnly::to_be_mincut_clusters.pop();
                 to_be_mincut_lock.unlock();
-                if(current_cluster.size() == 1 && current_cluster[0] == -1) {
+                if(current_cluster.size() == 1 || current_cluster[0] == -1) {
                     // done with work!
                     return;
                 }
