@@ -13,20 +13,9 @@ WCC returns the connected components of each cluster as its own cluster as long 
 ./constrained_clustering MincutOnly --edgelist <tab separated edgelist network> --existing-clustering <input clustering> --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1 --connectedness-criterion 1
 ```
 
-## Recommened CM command
-CM starts with a clustering on the entire graph then processes each cluster one by one. For each cluster, the size of a mincut is computed and determined whether it fits the connectivity criterion or not. This is by default log base 10 of n where n is the size of the cluster. If the size of a mincut is greater than the threshold, then the cluster is considered well-connected. Otherwise, the cluster is split at the mincut and both sides of the mincut get clustered by the input clustering algorithm.
-```
-./constrained_clustering CM --edgelist <tab separated edgelist network> --algorithm <choose from leiden-cpm, leiden-mod, louvain> --resolution <only supply when algorithm is leiden-cpm. Floating point value> --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1
-```
-
-
 
 ## Environment setup
-The project uses gcc/11.2.0 and cmake/3.26.3 for now. On a module based cluster system, one can simply do the following commands to get the right environment for building and running.
-```
-module load gcc/11.2.0
-module load cmake/3.26.3
-```
+The project uses gcc/11.2.0 and cmake/3.26.3 for now.
 
 ## How to build
 A one time setup is needed with the [setup.sh](setup.sh) script. This script builds the igraph and libleidenalg libraries.
