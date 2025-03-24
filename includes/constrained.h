@@ -10,6 +10,8 @@
 #include <thread>
 #include <map>
 #include <fstream>
+#include <stdexcept>
+#include <sstream>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -54,12 +56,37 @@ class ConstrainedClustering {
             return original_to_new_id_map;
         }
 
+        static inline char get_delimiter(std::string filepath) {
+            std::ifstream clustering(filepath);
+            std::string line;
+            getline(clustering, line);
+            if (line.find(',') != std::string::npos) {
+                return ',';
+            } else if (line.find('\t') != std::string::npos) {
+                return '\t';
+            } else if (line.find(' ') != std::string::npos) {
+                return ' ';
+            }
+            throw std::invalid_argument("Could not detect filetype for " + filepath);
+        }
+
         static inline std::map<int, int> ReadCommunities(const std::map<std::string, int>& original_to_new_id_map, std::string existing_clustering) {
             std::map<int, int> partition_map;
+            char delimiter = get_delimiter(existing_clustering);
             std::ifstream existing_clustering_file(existing_clustering);
-            std::string node_id;
-            int cluster_id = -1;
-            while (existing_clustering_file >> node_id >> cluster_id) {
+            std::string line;
+            while(std::getline(existing_clustering_file, line)) {
+                std::stringstream ss(line);
+                std::string current_value;
+                std::vector<std::string> current_line;
+                while(std::getline(ss, current_value, delimiter)) {
+                    current_line.push_back(current_value);
+                }
+                std::string node_id = current_line[0];
+                if(node_id == "node_id") {
+                    continue;
+                }
+                int cluster_id = std::atoi(current_line[1].c_str());
                 if(original_to_new_id_map.contains(node_id)) {
                     int new_node_id = original_to_new_id_map.at(node_id);
                     partition_map[new_node_id] = cluster_id;

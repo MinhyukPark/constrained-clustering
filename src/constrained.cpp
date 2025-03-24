@@ -4,13 +4,14 @@ void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& clus
     std::ofstream clustering_output(this->output_file);
     int current_cluster_id = 0;
     this->WriteToLogFile("final clusters:", Log::debug);
+    clustering_output << "node_id,cluster_id" << '\n';
     while(!cluster_queue.empty()) {
         std::vector<int> current_cluster = cluster_queue.front();
         cluster_queue.pop();
         this->WriteToLogFile("new cluster", Log::debug);
         for(size_t i = 0; i < current_cluster.size(); i ++) {
             this->WriteToLogFile(std::to_string(current_cluster[i]), Log::debug);
-            clustering_output << VAS(graph, "name", current_cluster[i]) << " " << current_cluster_id << '\n';
+            clustering_output << VAS(graph, "name", current_cluster[i]) << "," << current_cluster_id << '\n';
         }
         current_cluster_id ++;
     }
@@ -20,7 +21,7 @@ void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& clus
 void ConstrainedClustering::WritePartitionMap(std::map<int, int>& final_partition) {
     std::ofstream clustering_output(this->output_file);
     for(auto const& [node_id, cluster_id]: final_partition) {
-        clustering_output << node_id << " " << cluster_id << '\n';
+        clustering_output << node_id << "," << cluster_id << '\n';
     }
     clustering_output.close();
 }
