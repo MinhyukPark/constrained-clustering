@@ -1,6 +1,72 @@
 #include "constrained.h"
 
-void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue, igraph_t* graph) {
+std::map<int, std::string> ConstrainedClustering::InvertMap(const std::map<std::string, int>& original_to_new_id_map) {
+    std::map<int, std::string> new_to_original_id_map;
+    for(auto const& [original_id, new_id] : original_to_new_id_map) {
+        new_to_original_id_map[new_id] = original_id;
+    }
+    return new_to_original_id_map;
+}
+
+std::map<std::string, int> ConstrainedClustering::GetOriginalToNewIdMap(std::string edgelist) {
+    std::map<std::string, int> original_to_new_id_map;
+    char delimiter = get_delimiter(edgelist);
+    std::ifstream edgelist_file(edgelist);
+    std::string line;
+    int line_no = 0;
+    int next_node_id = 0;
+    while(std::getline(edgelist_file, line)) {
+        std::stringstream ss(line);
+        std::string current_value;
+        std::vector<std::string> current_line;
+        while(std::getline(ss, current_value, delimiter)) {
+            current_line.push_back(current_value);
+        }
+        if(line_no == 0) {
+            line_no ++;
+            continue;
+        }
+        std::string source = current_line[0];
+        std::string target = current_line[1];
+        if (!original_to_new_id_map.contains(source)) {
+            original_to_new_id_map[source] = next_node_id;
+            next_node_id ++;
+        }
+        if (!original_to_new_id_map.contains(target)) {
+            original_to_new_id_map[target] = next_node_id;
+            next_node_id ++;
+        }
+        line_no ++;
+    }
+    return original_to_new_id_map;
+}
+
+void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map) {
+    /* igraph_setup(); */
+    igraph_add_vertices(graph, original_to_new_id_map.size(), NULL);
+    char delimiter = get_delimiter(edgelist);
+    std::ifstream edgelist_file(edgelist);
+    std::string line;
+    int line_no = 0;
+    while(std::getline(edgelist_file, line)) {
+        std::stringstream ss(line);
+        std::string current_value;
+        std::vector<std::string> current_line;
+        while(std::getline(ss, current_value, delimiter)) {
+            current_line.push_back(current_value);
+        }
+        if(line_no == 0) {
+            line_no ++;
+            continue;
+        }
+        std::string source = current_line[0];
+        std::string target = current_line[1];
+        igraph_add_edge(graph, original_to_new_id_map.at(source), original_to_new_id_map.at(target));
+        line_no ++;
+    }
+}
+
+void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map) {
     std::ofstream clustering_output(this->output_file);
     int current_cluster_id = 0;
     this->WriteToLogFile("final clusters:", Log::debug);
@@ -11,7 +77,8 @@ void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& clus
         this->WriteToLogFile("new cluster", Log::debug);
         for(size_t i = 0; i < current_cluster.size(); i ++) {
             this->WriteToLogFile(std::to_string(current_cluster[i]), Log::debug);
-            clustering_output << VAS(graph, "name", current_cluster[i]) << "," << current_cluster_id << '\n';
+            /* clustering_output << VAS(graph, "name", current_cluster[i]) << "," << current_cluster_id << '\n'; */
+            clustering_output << new_to_original_id_map.at(current_cluster[i]) << "," << current_cluster_id << '\n';
         }
         current_cluster_id ++;
     }

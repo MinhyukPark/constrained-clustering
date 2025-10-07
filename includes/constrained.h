@@ -39,22 +39,27 @@ class ConstrainedClustering {
         virtual int main() = 0;
         int WriteToLogFile(std::string message, Log message_type);
         void WritePartitionMap(std::map<int,int>& final_partition);
-        void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph);
+        void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
 
-        static inline std::map<std::string, int> GetOriginalToNewIdMap(igraph_t* graph) {
-            std::map<std::string, int> original_to_new_id_map;
-            /* igraph_vit_t vit; */
-            /* igraph_vit_create(graph, igraph_vss_all(), &vit); */
-            /* for(; !IGRAPH_VIT_END(vit); IGRAPH_VIT_NEXT(vit)) { */
-            /*     igraph_integer_t current_node = IGRAPH_VIT_GET(vit); */
-            /*     original_to_new_id_map[VAS(graph, "name", current_node)] = current_node; */
-            /* } */
-            /* igraph_vit_destroy(&vit); */
-            for(int node_id = 0; node_id < igraph_vcount(graph); node_id ++) {
-                original_to_new_id_map[VAS(graph, "name", node_id)] = node_id;
-            }
-            return original_to_new_id_map;
-        }
+        std::map<std::string, int> GetOriginalToNewIdMap(std::string edgelist);
+        std::map<int, std::string> InvertMap(const std::map<std::string, int>& original_to_new_id_map);
+
+        /* static inline std::map<std::string, int> GetOriginalToNewIdMap(igraph_t* graph) { */
+        /*     std::map<std::string, int> original_to_new_id_map; */
+        /*     /1* igraph_vit_t vit; *1/ */
+        /*     /1* igraph_vit_create(graph, igraph_vss_all(), &vit); *1/ */
+        /*     /1* for(; !IGRAPH_VIT_END(vit); IGRAPH_VIT_NEXT(vit)) { *1/ */
+        /*     /1*     igraph_integer_t current_node = IGRAPH_VIT_GET(vit); *1/ */
+        /*     /1*     original_to_new_id_map[VAS(graph, "name", current_node)] = current_node; *1/ */
+        /*     /1* } *1/ */
+        /*     /1* igraph_vit_destroy(&vit); *1/ */
+        /*     for(int node_id = 0; node_id < igraph_vcount(graph); node_id ++) { */
+        /*         original_to_new_id_map[VAS(graph, "name", node_id)] = node_id; */
+        /*     } */
+        /*     return original_to_new_id_map; */
+        /* } */
+
+        void LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map);
 
         static inline char get_delimiter(std::string filepath) {
             std::ifstream clustering(filepath);
@@ -75,6 +80,7 @@ class ConstrainedClustering {
             char delimiter = get_delimiter(existing_clustering);
             std::ifstream existing_clustering_file(existing_clustering);
             std::string line;
+            int line_no = 0;
             while(std::getline(existing_clustering_file, line)) {
                 std::stringstream ss(line);
                 std::string current_value;
@@ -83,7 +89,8 @@ class ConstrainedClustering {
                     current_line.push_back(current_value);
                 }
                 std::string node_id = current_line[0];
-                if(node_id == "node_id") {
+                if(line_no == 0) {
+                    line_no ++;
                     continue;
                 }
                 int cluster_id = std::atoi(current_line[1].c_str());
@@ -91,6 +98,7 @@ class ConstrainedClustering {
                     int new_node_id = original_to_new_id_map.at(node_id);
                     partition_map[new_node_id] = cluster_id;
                 }
+                line_no ++;
             }
             return partition_map;
         }

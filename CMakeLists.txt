@@ -30,14 +30,14 @@ else()
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # for clangd lsp
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
     # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -march=native")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -DNDEBUG -march=native -funroll-loops -fomit-frame-pointer")
     # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -DNDEBUG -march=native")
-    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -ggdb -fno-omit-frame-pointer")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer")
     # File paths
     set(SOURCE_MAIN ${CMAKE_SOURCE_DIR}/src/main.cpp)
     set(SOURCE_INTERNAL_LIBS
         ${CMAKE_SOURCE_DIR}/src/constrained.cpp
-        ${CMAKE_SOURCE_DIR}/src/cm.cpp
+        # ${CMAKE_SOURCE_DIR}/src/cm.cpp
         ${CMAKE_SOURCE_DIR}/src/mincut_only.cpp
         ${CMAKE_SOURCE_DIR}/src/mincut_custom.cpp
         ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx/tlx/logger.cpp
@@ -55,6 +55,7 @@ else()
         PUBLIC ${CMAKE_SOURCE_DIR}/src
         PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/lib
         PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx
+        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/pcg-cpp/include
     )
     target_link_libraries(internal_libs PUBLIC igraph::igraph)
     target_link_libraries(internal_libs PUBLIC libleidenalg::libleidenalg)

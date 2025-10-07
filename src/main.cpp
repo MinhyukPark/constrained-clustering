@@ -4,51 +4,54 @@
 #include "constrained.h"
 #include "library.h"
 #include "mincut_only.h"
-#include "cm.h"
+/* #include "cm.h" */
 
 
 int main(int argc, char* argv[]) {
     argparse::ArgumentParser main_program("constrained-clustering");
-
-    argparse::ArgumentParser cm("CM");
-    cm.add_description("CM");
+    /* BEGIN comment out cm */
+    /* argparse::ArgumentParser cm("CM"); */
+    /* cm.add_description("CM"); */
+    /* END comment out cm */
 
     argparse::ArgumentParser mincut_only("MincutOnly");
-    mincut_only.add_description("CM");
+    mincut_only.add_description("WCC");
 
-    cm.add_argument("--edgelist")
-        .required()
-        .help("Network edge-list file");
-    cm.add_argument("--algorithm")
-        .help("Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)")
-        .action([](const std::string& value) {
-            static const std::vector<std::string> choices = {"leiden-cpm", "leiden-mod", "louvain"};
-            if (std::find(choices.begin(), choices.end(), value) != choices.end()) {
-                return value;
-            }
-            throw std::invalid_argument("--algorithm can only take in leiden-cpm, leiden-mod, or louvain.");
-        });
-    cm.add_argument("--resolution")
-        .default_value(double(0.01))
-        .help("Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm")
-        .scan<'f', double>();
-    cm.add_argument("--existing-clustering")
-        .default_value("")
-        .help("Existing clustering file");
-    cm.add_argument("--num-processors")
-        .default_value(int(1))
-        .help("Number of processors")
-        .scan<'d', int>();
-    cm.add_argument("--output-file")
-        .required()
-        .help("Output clustering file");
-    cm.add_argument("--log-file")
-        .required()
-        .help("Output log file");
-    cm.add_argument("--log-level")
-        .default_value(int(1))
-        .help("Log level where 0 = silent, 1 = info, 2 = verbose")
-        .scan<'d', int>();
+    /* BEGIN comment out cm */
+    /* cm.add_argument("--edgelist") */
+    /*     .required() */
+    /*     .help("Network edge-list file"); */
+    /* cm.add_argument("--algorithm") */
+    /*     .help("Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)") */
+    /*     .action([](const std::string& value) { */
+    /*         static const std::vector<std::string> choices = {"leiden-cpm", "leiden-mod", "louvain"}; */
+    /*         if (std::find(choices.begin(), choices.end(), value) != choices.end()) { */
+    /*             return value; */
+    /*         } */
+    /*         throw std::invalid_argument("--algorithm can only take in leiden-cpm, leiden-mod, or louvain."); */
+    /*     }); */
+    /* cm.add_argument("--resolution") */
+    /*     .default_value(double(0.01)) */
+    /*     .help("Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm") */
+    /*     .scan<'f', double>(); */
+    /* cm.add_argument("--existing-clustering") */
+    /*     .default_value("") */
+    /*     .help("Existing clustering file"); */
+    /* cm.add_argument("--num-processors") */
+    /*     .default_value(int(1)) */
+    /*     .help("Number of processors") */
+    /*     .scan<'d', int>(); */
+    /* cm.add_argument("--output-file") */
+    /*     .required() */
+    /*     .help("Output clustering file"); */
+    /* cm.add_argument("--log-file") */
+    /*     .required() */
+    /*     .help("Output log file"); */
+    /* cm.add_argument("--log-level") */
+    /*     .default_value(int(1)) */
+    /*     .help("Log level where 0 = silent, 1 = info, 2 = verbose") */
+    /*     .scan<'d', int>(); */
+    /* END comment out cm */
 
     mincut_only.add_argument("--edgelist")
         .required()
@@ -75,7 +78,10 @@ int main(int argc, char* argv[]) {
         .help("Log level where 0 = silent, 1 = info, 2 = verbose")
         .scan<'d', int>();
 
-    main_program.add_subparser(cm);
+    /* BEGIN comment out cm */
+    /* main_program.add_subparser(cm); */
+    /* END comment out cm */
+
     main_program.add_subparser(mincut_only);
     try {
         main_program.parse_args(argc, argv);
@@ -85,20 +91,23 @@ int main(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    if(main_program.is_subcommand_used(cm)) {
-        std::string edgelist = cm.get<std::string>("--edgelist");
-        std::string algorithm = cm.get<std::string>("--algorithm");
-        double resolution = cm.get<double>("--resolution");
-        std::string existing_clustering = cm.get<std::string>("--existing-clustering");
-        int num_processors = cm.get<int>("--num-processors");
-        std::string output_file = cm.get<std::string>("--output-file");
-        std::string log_file = cm.get<std::string>("--log-file");
-        int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
-        ConstrainedClustering* cm = new CM(edgelist, algorithm, resolution, existing_clustering, num_processors, output_file, log_file, log_level);
-        random_functions::setSeed(0);
-        cm->main();
-        delete cm;
-    } else if(main_program.is_subcommand_used(mincut_only)) {
+    /* BEGIN comment out cm */
+    /* if(main_program.is_subcommand_used(cm)) { */
+    /*     std::string edgelist = cm.get<std::string>("--edgelist"); */
+    /*     std::string algorithm = cm.get<std::string>("--algorithm"); */
+    /*     double resolution = cm.get<double>("--resolution"); */
+    /*     std::string existing_clustering = cm.get<std::string>("--existing-clustering"); */
+    /*     int num_processors = cm.get<int>("--num-processors"); */
+    /*     std::string output_file = cm.get<std::string>("--output-file"); */
+    /*     std::string log_file = cm.get<std::string>("--log-file"); */
+    /*     int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner */
+    /*     ConstrainedClustering* cm = new CM(edgelist, algorithm, resolution, existing_clustering, num_processors, output_file, log_file, log_level); */
+    /*     random_functions::setSeed(0); */
+    /*     cm->main(); */
+    /*     delete cm; */
+    /* } else if(main_program.is_subcommand_used(mincut_only)) { */
+    /* END comment out cm */
+    if(main_program.is_subcommand_used(mincut_only)) {
         std::string edgelist = mincut_only.get<std::string>("--edgelist");
         std::string existing_clustering = mincut_only.get<std::string>("--existing-clustering");
         int num_processors = mincut_only.get<int>("--num-processors");
