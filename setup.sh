@@ -8,8 +8,13 @@ rm -rf ${external_libs_full_path}/VieCut
 rm -rf ${external_libs_full_path}/libleidenalg
 rm -rf ${external_libs_full_path}/lib
 rm -rf ${external_libs_full_path}/lib64
+rm -rf ${external_libs_full_path}/pcg-cpp
 mkdir ${external_libs_full_path}
 cd ${external_libs_full_path}
+
+echo "installing pcg to ${external_libs_full_path}"
+git clone https://github.com/imneme/pcg-cpp.git
+
 # install igraph to external_libs
 echo "installing igraph to ${external_libs_full_path}"
 git clone https://github.com/igraph/igraph.git
