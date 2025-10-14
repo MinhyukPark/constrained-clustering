@@ -1,7 +1,56 @@
 #include "mincut_only.h"
 
+
 int MincutOnly::main() {
+
+    this->WriteToLogFile("Parsing connectedness criterion" , Log::info);
+/* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
+/* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
+        /* static inline bool IsWellConnected(std::string connectedness_criterion, int in_partition_size, int out_partition_size, int edge_cut_size) { */
+    size_t log_position = this->connectedness_criterion.find("log_");
+    size_t n_caret_position = this->connectedness_criterion.find("n^");
+    double connectedness_criterion_c = 1;
+    double connectedness_criterion_x = 1;
+    ConnectednessCriterion current_connectedness_criterion = ConnectednessCriterion::Simple;
+    if (log_position != std::string::npos) {
+        // is Clog_x(n)
+        current_connectedness_criterion = ConnectednessCriterion::Logarithimic;
+        if (log_position == 0) {
+            connectedness_criterion_c = 1;
+        } else {
+            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, log_position));
+        }
+        size_t open_parenthesis_position = this->connectedness_criterion.find("(", log_position + 4);
+        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(log_position + 4, open_parenthesis_position));
+    } else if (n_caret_position != std::string::npos) {
+        // is cN^x
+        current_connectedness_criterion = ConnectednessCriterion::Exponential;
+        if (n_caret_position == 0) {
+            connectedness_criterion_c = 1;
+        } else {
+            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, n_caret_position));
+        }
+        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(n_caret_position + 2));
+    } else if (this->connectedness_criterion != "0") {
+        // wasn't log or exponent so if it isn't 0 then it's an error
+        // exit
+        this->WriteToLogFile("Colud not parse connectedness_criterion" , Log::error);
+        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are integers" , Log::error);
+        return 1;
+    }
+    if (current_connectedness_criterion == ConnectednessCriterion::Simple) {
+        this->WriteToLogFile("Running with CC mode (mincut of each cluster has to be greater than 0)" , Log::info);
+    } else if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
+        this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times log base " + std::to_string(connectedness_criterion_x) + "of n" , Log::info);
+    } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
+        this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times n to the power of " + std::to_string(connectedness_criterion_x), Log::info);
+    } else {
+        // should not possible to reach
+        exit(1);
+    }
     this->WriteToLogFile("Loading the initial graph" , Log::info);
+
+
     /* FILE* edgelist_file = fopen(this->edgelist.c_str(), "r"); */
     std::map<std::string, int> original_to_new_id_map = this->GetOriginalToNewIdMap(this->edgelist);
     std::map<int, std::string> new_to_originial_id_map = this->InvertMap(original_to_new_id_map);
@@ -39,11 +88,11 @@ int MincutOnly::main() {
     /** SECTION Get Connected Components START **/
     std::vector<std::vector<int>> connected_components_vector = ConstrainedClustering::GetConnectedComponents(&graph);
     /** SECTION Get Connected Components END **/
-    if(this->connectedness_criterion == ConnectednessCriterion::Simple) {
+    if(current_connectedness_criterion == ConnectednessCriterion::Simple) {
         for(size_t i = 0; i < connected_components_vector.size(); i ++) {
             MincutOnly::done_being_mincut_clusters.push(connected_components_vector[i]);
         }
-    } else if(this->connectedness_criterion == ConnectednessCriterion::Well) {
+    } else {
         // store the results into the queue that each thread pulls from
         for(size_t i = 0; i < connected_components_vector.size(); i ++) {
             MincutOnly::to_be_mincut_clusters.push(connected_components_vector[i]);
@@ -68,7 +117,7 @@ int MincutOnly::main() {
                 }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
-                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, this->connectedness_criterion));
+                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x));
                 }
                 /* get the result back from threads */
                 /* the results from each thread gets stored in to_be_clustered_clusters */
@@ -77,7 +126,7 @@ int MincutOnly::main() {
                 }
             } else {
                 MincutOnly::to_be_mincut_clusters.push({-1});
-                MincutOnly::MinCutWorker(&graph, this->connectedness_criterion);
+                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x);
             }
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut after a round of mincuts", Log::debug);
             /** SECTION MinCut Each Connected Component END **/

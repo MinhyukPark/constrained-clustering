@@ -70,13 +70,16 @@ int main(int argc, char* argv[]) {
         .required()
         .help("Output log file");
     mincut_only.add_argument("--connectedness-criterion")
-        .default_value(int(0))
-        .help("Log level where 0 = simple, 1 = well-connectedness")
-        .scan<'d', int>();
+        .default_value("1log_10(n)")
+        .help("String where CC = 0, and otherwise would be in the form of Clog_x(n) or Cn^x for well-connectedness");
     mincut_only.add_argument("--log-level")
         .default_value(int(1))
         .help("Log level where 0 = silent, 1 = info, 2 = verbose")
         .scan<'d', int>();
+
+/*         The two functional forms would be: */
+/* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
+/* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
 
     /* BEGIN comment out cm */
     /* main_program.add_subparser(cm); */
@@ -114,7 +117,7 @@ int main(int argc, char* argv[]) {
         std::string output_file = mincut_only.get<std::string>("--output-file");
         std::string log_file = mincut_only.get<std::string>("--log-file");
         int log_level = mincut_only.get<int>("--log-level") - 1; // so that enum is cleaner
-        ConnectednessCriterion connectedness_criterion = static_cast<ConnectednessCriterion>(mincut_only.get<int>("--connectedness-criterion"));
+        std::string connectedness_criterion = mincut_only.get<std::string>("--connectedness-criterion");
         ConstrainedClustering* mincut_only = new MincutOnly(edgelist, existing_clustering, num_processors, output_file, log_file, connectedness_criterion, log_level);
         random_functions::setSeed(0);
         mincut_only->main();
