@@ -38,6 +38,7 @@ std::map<std::string, int> ConstrainedClustering::GetOriginalToNewIdMap(std::str
         }
         line_no ++;
     }
+    this->num_edges = line_no - 1;
     return original_to_new_id_map;
 }
 
@@ -47,7 +48,10 @@ void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgel
     char delimiter = get_delimiter(edgelist);
     std::ifstream edgelist_file(edgelist);
     std::string line;
+    igraph_vector_int_t edges;
+    igraph_vector_int_init(&edges, this->num_edges * 2);
     int line_no = 0;
+    int edge_index = 0;
     while(std::getline(edgelist_file, line)) {
         std::stringstream ss(line);
         std::string current_value;
@@ -61,9 +65,16 @@ void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgel
         }
         std::string source = current_line[0];
         std::string target = current_line[1];
-        igraph_add_edge(graph, original_to_new_id_map.at(source), original_to_new_id_map.at(target));
+        /* igraph_add_edge(graph, original_to_new_id_map.at(source), original_to_new_id_map.at(target)); */
+        VECTOR(edges)[edge_index] = original_to_new_id_map.at(source);
+        edge_index ++;
+        VECTOR(edges)[edge_index] = original_to_new_id_map.at(target);
+        edge_index ++;
         line_no ++;
+
     }
+    igraph_add_edges(graph, &edges, NULL);
+    igraph_vector_int_destroy(&edges);
 }
 
 void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map) {

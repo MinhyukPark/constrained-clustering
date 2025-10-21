@@ -446,6 +446,7 @@ class ConstrainedClustering {
 
     protected:
         std::string edgelist;
+        int num_edges;
         std::string algorithm;
         double clustering_parameter;
         std::string existing_clustering;
