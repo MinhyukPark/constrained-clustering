@@ -11,6 +11,7 @@ int MincutOnly::main() {
     size_t n_caret_position = this->connectedness_criterion.find("n^");
     double connectedness_criterion_c = 1;
     double connectedness_criterion_x = 1;
+    double pre_computed_log = -1;
     ConnectednessCriterion current_connectedness_criterion = ConnectednessCriterion::Simple;
     if (log_position != std::string::npos) {
         // is Clog_x(n)
@@ -42,6 +43,7 @@ int MincutOnly::main() {
         this->WriteToLogFile("Running with CC mode (mincut of each cluster has to be greater than 0)" , Log::info);
     } else if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
         this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times log base " + std::to_string(connectedness_criterion_x) + "of n" , Log::info);
+        pre_computed_log = connectedness_criterion_c / std::log(connectedness_criterion_x);
     } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
         this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times n to the power of " + std::to_string(connectedness_criterion_x), Log::info);
     } else {
@@ -117,7 +119,7 @@ int MincutOnly::main() {
                 }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
-                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x));
+                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log));
                 }
                 /* get the result back from threads */
                 /* the results from each thread gets stored in to_be_clustered_clusters */
@@ -126,7 +128,7 @@ int MincutOnly::main() {
                 }
             } else {
                 MincutOnly::to_be_mincut_clusters.push({-1});
-                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x);
+                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log);
             }
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut after a round of mincuts", Log::debug);
             /** SECTION MinCut Each Connected Component END **/

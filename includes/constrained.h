@@ -391,7 +391,7 @@ class ConstrainedClustering {
 
 /* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
 /* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
-        static inline bool IsWellConnected(ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, int in_partition_size, int out_partition_size, int edge_cut_size) {
+        static inline bool IsWellConnected(ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, int in_partition_size, int out_partition_size, int edge_cut_size) {
             /* size_t log_position = connectedness_criterion.find("log") */
             /* size_t n_caret_position = connectedness_criterion.find("n^") */
             /* if (log_position != std::string::npos) { */
@@ -399,7 +399,8 @@ class ConstrainedClustering {
             /* } else if (n_caret_position != std::string::npos) { */
             /* } */
             if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
-                bool node_connectivity = connectedness_criterion_c * std::log(in_partition_size + out_partition_size) / std::log(connectedness_criterion_x) < edge_cut_size;
+                /* bool node_connectivity = connectedness_criterion_c * std::log(in_partition_size + out_partition_size) / std::log(connectedness_criterion_x) < edge_cut_size; */
+                bool node_connectivity = pre_computed_log * std::log(in_partition_size + out_partition_size) < edge_cut_size;
                 return node_connectivity;
             } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
                 bool node_connectivity = connectedness_criterion_c * std::pow(in_partition_size + out_partition_size, connectedness_criterion_x) < edge_cut_size;
