@@ -11,7 +11,7 @@ else()
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib/cmake/libleidenalg)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/igraph)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/libleidenalg)
-    find_package(igraph 0.10 CONFIG REQUIRED)
+    find_package(igraph 1.0.0 CONFIG REQUIRED)
     find_package(libleidenalg 0.11 CONFIG REQUIRED)
     find_package(OpenMP REQUIRED)
 
