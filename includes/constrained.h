@@ -23,12 +23,13 @@ enum ConnectednessCriterion {Simple, Logarithimic, Exponential};
 
 class ConstrainedClustering {
     public:
-        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level) {
+        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion) : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level), connectedness_criterion(connectedness_criterion) {
             if(this->log_level > -1) {
                 this->start_time = std::chrono::steady_clock::now();
                 this->log_file_handle.open(this->log_file);
             }
             this->num_calls_to_log_write = 0;
+            this->InitializeConnectednessCriterion();
         };
 
         virtual ~ConstrainedClustering() {
@@ -41,24 +42,10 @@ class ConstrainedClustering {
         int WriteToLogFile(std::string message, Log message_type);
         void WritePartitionMap(std::map<int,int>& final_partition);
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
+        void InitializeConnectednessCriterion();
 
         std::map<std::string, int> GetOriginalToNewIdMap(std::string edgelist);
         std::map<int, std::string> InvertMap(const std::map<std::string, int>& original_to_new_id_map);
-
-        /* static inline std::map<std::string, int> GetOriginalToNewIdMap(igraph_t* graph) { */
-        /*     std::map<std::string, int> original_to_new_id_map; */
-        /*     /1* igraph_vit_t vit; *1/ */
-        /*     /1* igraph_vit_create(graph, igraph_vss_all(), &vit); *1/ */
-        /*     /1* for(; !IGRAPH_VIT_END(vit); IGRAPH_VIT_NEXT(vit)) { *1/ */
-        /*     /1*     igraph_integer_t current_node = IGRAPH_VIT_GET(vit); *1/ */
-        /*     /1*     original_to_new_id_map[VAS(graph, "name", current_node)] = current_node; *1/ */
-        /*     /1* } *1/ */
-        /*     /1* igraph_vit_destroy(&vit); *1/ */
-        /*     for(int node_id = 0; node_id < igraph_vcount(graph); node_id ++) { */
-        /*         original_to_new_id_map[VAS(graph, "name", node_id)] = node_id; */
-        /*     } */
-        /*     return original_to_new_id_map; */
-        /* } */
 
         void LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map);
 
@@ -323,29 +310,33 @@ class ConstrainedClustering {
             if(algorithm == "louvain") {
                 ConstrainedClustering::RunLouvainAndUpdatePartition(partition_map, seed, &graph);
             } else if(algorithm == "leiden-cpm") {
-                std::vector<double> edge_weights;
-                igraph_eit_t eit;
-                igraph_eit_create(&graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-                for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
-                    double current_edge_weight = EAN(&graph, "weight", IGRAPH_EIT_GET(eit));
-                    /* std::cerr << "current edge weight: " << current_edge_weight << std::endl; */
-                    edge_weights.push_back(current_edge_weight);
-                }
-                igraph_eit_destroy(&eit);
-                Graph* leiden_graph = Graph::GraphFromEdgeWeights(&graph, edge_weights);
-                CPMVertexPartition partition(leiden_graph, clustering_parameter);
+                /* std::vector<double> edge_weights; */
+                /* igraph_eit_t eit; */
+                /* igraph_eit_create(&graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit); */
+                /* for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) { */
+                /*     double current_edge_weight = EAN(&graph, "weight", IGRAPH_EIT_GET(eit)); */
+                /*     /1* std::cerr << "current edge weight: " << current_edge_weight << std::endl; *1/ */
+                /*     edge_weights.push_back(current_edge_weight); */
+                /* } */
+                /* igraph_eit_destroy(&eit); */
+                /* Graph* leiden_graph = Graph::GraphFromEdgeWeights(&graph, edge_weights); */
+                /* CPMVertexPartition partition(leiden_graph, clustering_parameter); */
+                Graph leiden_graph(&graph);
+                CPMVertexPartition partition(&leiden_graph, clustering_parameter);
                 ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, seed, &graph);
             } else if(algorithm == "leiden-mod") {
-                std::vector<double> edge_weights;
-                igraph_eit_t eit;
-                igraph_eit_create(&graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
-                for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
-                    double current_edge_weight = EAN(&graph, "weight", IGRAPH_EIT_GET(eit));
-                    edge_weights.push_back(current_edge_weight);
-                }
-                igraph_eit_destroy(&eit);
-                Graph* leiden_graph = Graph::GraphFromEdgeWeights(&graph, edge_weights);
-                ModularityVertexPartition partition(leiden_graph);
+                /* std::vector<double> edge_weights; */
+                /* igraph_eit_t eit; */
+                /* igraph_eit_create(&graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit); */
+                /* for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) { */
+                /*     double current_edge_weight = EAN(&graph, "weight", IGRAPH_EIT_GET(eit)); */
+                /*     edge_weights.push_back(current_edge_weight); */
+                /* } */
+                /* igraph_eit_destroy(&eit); */
+                /* Graph* leiden_graph = Graph::GraphFromEdgeWeights(&graph, edge_weights); */
+                /* ModularityVertexPartition partition(leiden_graph); */
+                Graph leiden_graph(&graph);
+                ModularityVertexPartition partition(&leiden_graph);
                 ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, seed, &graph);
             } else {
                 throw std::invalid_argument("GetCommunities(): Unsupported algorithm");
@@ -458,6 +449,11 @@ class ConstrainedClustering {
         std::ofstream log_file_handle;
         int log_level;
         int num_calls_to_log_write;
+        std::string connectedness_criterion;
+        double connectedness_criterion_c;
+        double connectedness_criterion_x;
+        double pre_computed_log;
+        ConnectednessCriterion current_connectedness_criterion;
 };
 
 #endif

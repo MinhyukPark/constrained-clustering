@@ -7,70 +7,18 @@ int MincutOnly::main() {
 /* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
 /* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
         /* static inline bool IsWellConnected(std::string connectedness_criterion, int in_partition_size, int out_partition_size, int edge_cut_size) { */
-    size_t log_position = this->connectedness_criterion.find("log_");
-    size_t n_caret_position = this->connectedness_criterion.find("n^");
-    double connectedness_criterion_c = 1;
-    double connectedness_criterion_x = 1;
-    double pre_computed_log = -1;
-    ConnectednessCriterion current_connectedness_criterion = ConnectednessCriterion::Simple;
-    if (log_position != std::string::npos) {
-        // is Clog_x(n)
-        current_connectedness_criterion = ConnectednessCriterion::Logarithimic;
-        if (log_position == 0) {
-            connectedness_criterion_c = 1;
-        } else {
-            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, log_position));
-        }
-        size_t open_parenthesis_position = this->connectedness_criterion.find("(", log_position + 4);
-        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(log_position + 4, open_parenthesis_position));
-    } else if (n_caret_position != std::string::npos) {
-        // is cN^x
-        current_connectedness_criterion = ConnectednessCriterion::Exponential;
-        if (n_caret_position == 0) {
-            connectedness_criterion_c = 1;
-        } else {
-            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, n_caret_position));
-        }
-        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(n_caret_position + 2));
-    } else if (this->connectedness_criterion != "0") {
-        // wasn't log or exponent so if it isn't 0 then it's an error
-        // exit
-        this->WriteToLogFile("Colud not parse connectedness_criterion" , Log::error);
-        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are integers" , Log::error);
-        return 1;
-    }
-    if (current_connectedness_criterion == ConnectednessCriterion::Simple) {
-        this->WriteToLogFile("Running with CC mode (mincut of each cluster has to be greater than 0)" , Log::info);
-    } else if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
-        this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times log base " + std::to_string(connectedness_criterion_x) + "of n" , Log::info);
-        pre_computed_log = connectedness_criterion_c / std::log(connectedness_criterion_x);
-    } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
-        this->WriteToLogFile("Running with WCC mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times n to the power of " + std::to_string(connectedness_criterion_x), Log::info);
-    } else {
-        // should not possible to reach
-        exit(1);
-    }
+    double connectedness_criterion_c = this->connectedness_criterion_c;
+    double connectedness_criterion_x = this->connectedness_criterion_x;
+    double pre_computed_log = this->pre_computed_log;
+    ConnectednessCriterion current_connectedness_criterion = this->current_connectedness_criterion;
     this->WriteToLogFile("Loading the initial graph" , Log::info);
 
 
-    /* FILE* edgelist_file = fopen(this->edgelist.c_str(), "r"); */
     std::map<std::string, int> original_to_new_id_map = this->GetOriginalToNewIdMap(this->edgelist);
     std::map<int, std::string> new_to_originial_id_map = this->InvertMap(original_to_new_id_map);
     igraph_t graph;
     igraph_empty(&graph, 0, IGRAPH_UNDIRECTED);
-    /* igraph_set_attribute_table(&igraph_cattribute_table); */
-    /* igraph_read_graph_ncol(&graph, edgelist_file, NULL, 1, IGRAPH_ADD_WEIGHTS_IF_PRESENT, IGRAPH_UNDIRECTED); */
     this->LoadEdgesFromFile(&graph, this->edgelist, original_to_new_id_map);
-    /* igraph_read_graph_edgelist(&graph, edgelist_file, 0, false); */
-    /* igraph_attribute_combination_t comb; */
-    /* igraph_attribute_combination(&comb, "weight", IGRAPH_ATTRIBUTE_COMBINE_FIRST, "", IGRAPH_ATTRIBUTE_COMBINE_IGNORE, IGRAPH_NO_MORE_ATTRIBUTES); */
-    /* igraph_simplify(&graph, true, true, &comb); */
-    /* if(!igraph_cattribute_has_attr(&graph, IGRAPH_ATTRIBUTE_EDGE, "weight")) { */
-    /*     SetIgraphAllEdgesWeight(&graph, 1.0); */
-    /* } */
-    /* fclose(edgelist_file); */
-    /* std::cerr << "num nodes read: " << igraph_vcount(&graph)  << std::endl; */
-    /* std::cerr << "num edges read: " << igraph_ecount(&graph)  << std::endl; */
     this->WriteToLogFile("Finished loading the initial graph" , Log::info);
 
     int before_mincut_number_of_clusters = -1;

@@ -142,3 +142,52 @@ int ConstrainedClustering::WriteToLogFile(std::string message, Log message_type)
     }
     return 0;
 }
+
+void ConstrainedClustering::InitializeConnectednessCriterion() {
+    size_t log_position = this->connectedness_criterion.find("log_");
+    size_t n_caret_position = this->connectedness_criterion.find("n^");
+    double connectedness_criterion_c = 1;
+    double connectedness_criterion_x = 1;
+    double pre_computed_log = -1;
+    ConnectednessCriterion current_connectedness_criterion = ConnectednessCriterion::Simple;
+    if (log_position != std::string::npos) {
+        // is Clog_x(n)
+        current_connectedness_criterion = ConnectednessCriterion::Logarithimic;
+        if (log_position == 0) {
+            connectedness_criterion_c = 1;
+        } else {
+            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, log_position));
+        }
+        size_t open_parenthesis_position = this->connectedness_criterion.find("(", log_position + 4);
+        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(log_position + 4, open_parenthesis_position));
+    } else if (n_caret_position != std::string::npos) {
+        // is cN^x
+        current_connectedness_criterion = ConnectednessCriterion::Exponential;
+        if (n_caret_position == 0) {
+            connectedness_criterion_c = 1;
+        } else {
+            connectedness_criterion_c = std::stod(this->connectedness_criterion.substr(0, n_caret_position));
+        }
+        connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(n_caret_position + 2));
+    } else if (this->connectedness_criterion != "0") {
+        // wasn't log or exponent so if it isn't 0 then it's an error
+        // exit
+        this->WriteToLogFile("Colud not parse connectedness_criterion" , Log::error);
+        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are integers" , Log::error);
+    }
+    if (current_connectedness_criterion == ConnectednessCriterion::Simple) {
+        this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than 0)" , Log::info);
+    } else if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
+        this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times log base " + std::to_string(connectedness_criterion_x) + "of n" , Log::info);
+        pre_computed_log = connectedness_criterion_c / std::log(connectedness_criterion_x);
+    } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
+        this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times n to the power of " + std::to_string(connectedness_criterion_x), Log::info);
+    } else {
+        // should not possible to reach
+        exit(1);
+    }
+    this->connectedness_criterion_c = connectedness_criterion_c;
+    this->connectedness_criterion_x = connectedness_criterion_x;
+    this->pre_computed_log = pre_computed_log;
+    this->current_connectedness_criterion = current_connectedness_criterion;
+}
