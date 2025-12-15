@@ -6,7 +6,7 @@
 
 class MincutOnly : public ConstrainedClustering {
     public:
-        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion) : ConstrainedClustering(edgelist, "", -1, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion) {
+        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type) : ConstrainedClustering(edgelist, "", -1, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
         };
         int main() override;
 
@@ -36,7 +36,7 @@ class MincutOnly : public ConstrainedClustering {
             return cluster_vectors;
         }
 
-        static inline void MinCutWorker(igraph_t* graph, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log) {
+        static inline void MinCutWorker(igraph_t* graph, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, std::string mincut_type = "cactus") {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
                 to_be_mincut_condition_variable.wait(to_be_mincut_lock, []() {
@@ -75,7 +75,7 @@ class MincutOnly : public ConstrainedClustering {
                 /* while(!ConstrainedClustering::IsWellConnected */
 
                 /* SetIgraphAllEdgesWeight(&induced_subgraph, 1.0); */
-                MinCutCustom mcc(&induced_subgraph);
+                MinCutCustom mcc(&induced_subgraph, mincut_type);
                 int edge_cut_size = mcc.ComputeMinCut();
                 std::vector<int> in_partition = mcc.GetInPartition();
                 std::vector<int> out_partition = mcc.GetOutPartition();

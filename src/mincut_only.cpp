@@ -67,7 +67,7 @@ int MincutOnly::main() {
                 }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
-                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log));
+                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, this->mincut_type));
                 }
                 /* get the result back from threads */
                 /* the results from each thread gets stored in to_be_clustered_clusters */

@@ -5,7 +5,7 @@
 
 class CM : public ConstrainedClustering {
     public:
-        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion) {
+        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
         };
         int main() override;
 
@@ -38,7 +38,7 @@ class CM : public ConstrainedClustering {
             return cluster_vectors;
         }
 
-        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log) {
+        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, std::string mincut_type = "cactus") {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
                 std::vector<int> current_cluster = CM::to_be_mincut_clusters.front();
@@ -72,7 +72,7 @@ class CM : public ConstrainedClustering {
                 /* while(!(is_non_trivial_cut || is_well_connected)) { */
                 // we do mincuts until it's a non trivial mincut or if the current cluster is already well connected (perhaps after some trivial mincuts)
                 while(true) {
-                    MinCutCustom mcc(&induced_subgraph);
+                    MinCutCustom mcc(&induced_subgraph, mincut_type);
                     edge_cut_size = mcc.ComputeMinCut();
                     std::vector<int> in_partition_candidate = mcc.GetInPartition();
                     std::vector<int> out_partition_candidate = mcc.GetOutPartition();
