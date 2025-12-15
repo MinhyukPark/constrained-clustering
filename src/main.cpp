@@ -51,6 +51,9 @@ int main(int argc, char* argv[]) {
     cm.add_argument("--connectedness-criterion")
         .default_value("1log_10(n)")
         .help("String in the form of Clog_x(n) or Cn^x for well-connectedness");
+    cm.add_argument("--mincut-type")
+        .default_value("cactus")
+        .help("Mincut type used (cactus or noi)");
     /* END comment out cm */
 
     mincut_only.add_argument("--edgelist")
@@ -76,7 +79,9 @@ int main(int argc, char* argv[]) {
     mincut_only.add_argument("--connectedness-criterion")
         .default_value("1log_10(n)")
         .help("String where CC = 0, and otherwise would be in the form of Clog_x(n) or Cn^x for well-connectedness");
-
+    mincut_only.add_argument("--mincut-type")
+        .default_value("cactus")
+        .help("Mincut type used (cactus or noi)");
 /*         The two functional forms would be: */
 /* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
 /* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
@@ -102,7 +107,8 @@ int main(int argc, char* argv[]) {
         std::string log_file = cm.get<std::string>("--log-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
         std::string connectedness_criterion = cm.get<std::string>("--connectedness-criterion");
-        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion);
+        std::string mincut_type = cm.get<std::string>("--mincut-type");
+        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type);
         random_functions::setSeed(0);
         connectivity_modifier->main();
         delete connectivity_modifier;
@@ -114,7 +120,8 @@ int main(int argc, char* argv[]) {
         std::string log_file = mincut_only.get<std::string>("--log-file");
         int log_level = mincut_only.get<int>("--log-level") - 1; // so that enum is cleaner
         std::string connectedness_criterion = mincut_only.get<std::string>("--connectedness-criterion");
-        ConstrainedClustering* mincut_only = new MincutOnly(edgelist, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion);
+        std::string mincut_type = mincut_only.get<std::string>("--mincut-type");
+        ConstrainedClustering* mincut_only = new MincutOnly(edgelist, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type);
         random_functions::setSeed(0);
         mincut_only->main();
         delete mincut_only;
