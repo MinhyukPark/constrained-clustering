@@ -51,6 +51,10 @@ int main(int argc, char* argv[]) {
     cm.add_argument("--connectedness-criterion")
         .default_value("1log_10(n)")
         .help("String in the form of Clog_x(n) or Cn^x for well-connectedness");
+    cm.add_argument("--prune")
+        .default_value(false) // default false, implicit true
+        .implicit_value(true) // default false, implicit true
+        .help("Whether to prune nodes using mincuts");
     cm.add_argument("--mincut-type")
         .default_value("cactus")
         .help("Mincut type used (cactus or noi)");
@@ -107,8 +111,9 @@ int main(int argc, char* argv[]) {
         std::string log_file = cm.get<std::string>("--log-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
         std::string connectedness_criterion = cm.get<std::string>("--connectedness-criterion");
+        bool prune = cm.get<bool>("--prune");
         std::string mincut_type = cm.get<std::string>("--mincut-type");
-        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type);
+        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, prune, mincut_type);
         random_functions::setSeed(0);
         connectivity_modifier->main();
         delete connectivity_modifier;

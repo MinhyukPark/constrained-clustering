@@ -438,7 +438,6 @@ class ConstrainedClustering {
 
     protected:
         std::string edgelist;
-        std::string mincut_type;
         int num_edges;
         std::string algorithm;
         double clustering_parameter;
@@ -451,6 +450,7 @@ class ConstrainedClustering {
         int log_level;
         int num_calls_to_log_write;
         std::string connectedness_criterion;
+        std::string mincut_type;
         double connectedness_criterion_c;
         double connectedness_criterion_x;
         double pre_computed_log;

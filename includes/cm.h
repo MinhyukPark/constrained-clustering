@@ -5,7 +5,7 @@
 
 class CM : public ConstrainedClustering {
     public:
-        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
+        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, bool prune, std::string mincut_type) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
         };
         int main() override;
 
@@ -38,7 +38,7 @@ class CM : public ConstrainedClustering {
             return cluster_vectors;
         }
 
-        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, std::string mincut_type = "cactus") {
+        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, bool prune, std::string mincut_type = "cactus") {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
                 std::vector<int> current_cluster = CM::to_be_mincut_clusters.front();
@@ -78,7 +78,7 @@ class CM : public ConstrainedClustering {
                     std::vector<int> out_partition_candidate = mcc.GetOutPartition();
                     is_well_connected = ConstrainedClustering::IsWellConnected(current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, in_partition_candidate.size(), out_partition_candidate.size(), edge_cut_size);
                     is_non_trivial_cut = in_partition_candidate.size() > 1 && out_partition_candidate.size() > 1;
-                    if(is_well_connected || is_non_trivial_cut) {
+                    if(prune || is_well_connected || is_non_trivial_cut) {
                         in_partition = in_partition_candidate;
                         out_partition = out_partition_candidate;
                         break;
@@ -96,7 +96,9 @@ class CM : public ConstrainedClustering {
                                 igraph_vector_int_init(&newnew_id_to_new_id_map, current_cluster_size - 1);
                                 node_to_remove = current_partition.at(0);
                                 current_cluster_set.erase(new_id_to_old_id_map[node_to_remove]);
-                                igraph_delete_vertices_idx(&induced_subgraph, igraph_vss_1(node_to_remove), NULL, &newnew_id_to_new_id_map);
+                                // MARK: possibly changes behavior?
+                                // igraph_delete_vertices_idx(&induced_subgraph, igraph_vss_1(node_to_remove), NULL, &newnew_id_to_new_id_map);
+                                igraph_delete_vertices_map(&induced_subgraph, igraph_vss_1(node_to_remove), NULL, &newnew_id_to_new_id_map);
                                 for(int i = 0; i < igraph_vector_int_size(&newnew_id_to_new_id_map); i ++) {
                                     int newnew_id = i;
                                     int new_id = VECTOR(newnew_id_to_new_id_map)[newnew_id];
@@ -147,7 +149,9 @@ class CM : public ConstrainedClustering {
                 igraph_destroy(&induced_subgraph);
             }
         }
+
     private:
+        bool prune;
         static inline std::mutex to_be_mincut_mutex;
         static inline std::condition_variable to_be_mincut_condition_variable;
         static inline std::queue<std::vector<int>> to_be_mincut_clusters;

@@ -49,18 +49,21 @@ Optional arguments:
 #### CM
 ```
 $ constrained_clustering CM --help
-Usage: CM [--help] [--version] --edgelist VAR [--algorithm VAR] [--resolution VAR] [--start-with-clustering] [--existing-clustering VAR] [--num-processors VAR] --output-file VAR --log-file VAR [--log-level VAR]
+Usage: CM [--help] [--version] --edgelist VAR [--algorithm VAR] [--resolution VAR] [--start-with-clustering] [--existing-clustering VAR] [--num-processors VAR] --output-file VAR --log-file VAR [--log-level VAR] --connectedness-criterion VAR [--prune] [--mincut-type VAR]
 
 Optional arguments:
-  -h, --help               shows help message and exits
-  -v, --version            prints version information and exits
-  --edgelist               Network edge-list file [required]
-  --algorithm              Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)
-  --resolution             Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm [default: 0.01]
-  --start-with-clustering  Whether to start with a run of the clustering algorithm or stick with mincut starts
-  --existing-clustering    Existing clustering file [default: ""]
-  --num-processors         Number of processors [default: 1]
-  --output-file            Output clustering file [required]
-  --log-file               Output log file [required]
-  --log-level              Log level where 0 = silent, 1 = info, 2 = verbose [default: 1]
+  -h, --help                shows help message and exits
+  -v, --version             prints version information and exits
+  --edgelist                Network edge-list file [required]
+  --algorithm               Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)
+  --resolution              Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm [default: 0.01]
+  --start-with-clustering   Whether to start with a run of the clustering algorithm or stick with mincut starts
+  --existing-clustering     Existing clustering file [default: ""]
+  --num-processors          Number of processors [default: 1]
+  --output-file             Output clustering file [required]
+  --log-file                Output log file [required]
+  --log-level               Log level where 0 = silent, 1 = info, 2 = verbose [default: 1]
+  --connectedness-criterion String in the form of Clog_x(n) or Cn^x for well-connectedness
+  --prune                   Flag. Takes no value. Whether to prune nodes using mincuts
+  --mincut-type             Mincut type used (cactus or noi)
 ```

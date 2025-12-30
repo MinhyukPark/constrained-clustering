@@ -41,7 +41,7 @@ int CM::main() {
         std::vector<std::thread> thread_vector;
         for(int i = 0; i < this->num_processors; i ++) {
             int seed = 0;
-            thread_vector.push_back(std::thread(CM::MinCutOrClusterWorker, &graph, this->algorithm, seed, this->clustering_parameter, this->current_connectedness_criterion, this->connectedness_criterion_c, this->connectedness_criterion_x, this->pre_computed_log, this->mincut_type));
+            thread_vector.push_back(std::thread(CM::MinCutOrClusterWorker, &graph, this->algorithm, seed, this->clustering_parameter, this->current_connectedness_criterion, this->connectedness_criterion_c, this->connectedness_criterion_x, this->pre_computed_log, this->prune, this->mincut_type));
         }
         /* the results from each thread gets stored in to_be_clustered_clusters */
         for(size_t thread_index = 0; thread_index < thread_vector.size(); thread_index ++) {
