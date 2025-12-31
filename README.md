@@ -1,5 +1,6 @@
 # Constrained clustering
-
+#### Notes about recent releases:
+Up until v1.1.1, the default behavior of CM was to use mincut based pruning. Starting with v1.2.0, the default behavior of CM is to not prune. One must use the optional `--prune` flag in order to run CM with pruning.
 
 ## Recommened CC command
 CC returns the connected components of each cluster as its own cluster
@@ -13,6 +14,12 @@ WCC returns the connected components of each cluster as its own cluster as long 
 ./constrained_clustering MincutOnly --edgelist <tab separated edgelist network> --existing-clustering <input clustering> --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1 --connectedness-criterion 1
 ```
 
+
+## Recommened CM command
+CM returns the connected components of each cluster as its own cluster as long as the connected component is well-connected. Otherwise, rounds of mincut followed by re-clustering are performed until either the cluster disintegrates or a well-connected cluster is found.
+```
+./constrained_clustering CM --edgelist <tab separated edgelist network> --existing-clustering <input clustering>  --algorithm <algorithm e.g., leiden-cpm> --clustering-parameter <resoluttion value> --num-processors <maximum allowed parallelism> --output-file <output file path> --log-file <log file path> --log-level 1 --connectedness-criterion 1
+```
 
 ## Environment setup
 The project uses gcc/11.2.0 and cmake/3.26.3 for now.
@@ -49,15 +56,14 @@ Optional arguments:
 #### CM
 ```
 $ constrained_clustering CM --help
-Usage: CM [--help] [--version] --edgelist VAR [--algorithm VAR] [--resolution VAR] [--start-with-clustering] [--existing-clustering VAR] [--num-processors VAR] --output-file VAR --log-file VAR [--log-level VAR] --connectedness-criterion VAR [--prune] [--mincut-type VAR]
+Usage: CM [--help] [--version] --edgelist VAR [--algorithm VAR] [--clustering-parameter VAR] [--existing-clustering VAR] [--num-processors VAR] --output-file VAR --log-file VAR [--log-level VAR] --connectedness-criterion VAR [--prune] [--mincut-type VAR]
 
 Optional arguments:
   -h, --help                shows help message and exits
   -v, --version             prints version information and exits
   --edgelist                Network edge-list file [required]
   --algorithm               Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)
-  --resolution              Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm [default: 0.01]
-  --start-with-clustering   Whether to start with a run of the clustering algorithm or stick with mincut starts
+  --clustering-parameter    Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm [default: 0.01]
   --existing-clustering     Existing clustering file [default: ""]
   --num-processors          Number of processors [default: 1]
   --output-file             Output clustering file [required]
