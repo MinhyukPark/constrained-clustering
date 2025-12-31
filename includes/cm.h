@@ -125,21 +125,23 @@ class CM : public ConstrainedClustering {
                         std::lock_guard<std::mutex> done_being_clustered_guard(CM::done_being_clustered_mutex);
                         CM::done_being_clustered_clusters.push(current_cluster);
                     }
-                } else if(is_non_trivial_cut) {
+                } else {
                     // do the mincut and actually run a clustering algorithm on both sides
                     std::vector<int> partitions[] = {in_partition, out_partition};
                     for(int partition_id = 0; partition_id < 2; partition_id ++) {
                         std::vector<int> current_partition = partitions[partition_id];
-                        assert(current_partition.size() > 1);
-                        std::vector<std::vector<int>> current_clusters = CM::RunClusterOnPartition(&induced_subgraph, algorithm, seed, clustering_parameter, current_partition);
-                        for(size_t i = 0; i < current_clusters.size(); i ++) {
-                            std::vector<int> translated_current_clusters;
-                            for(size_t j = 0; j < current_clusters[i].size(); j ++) {
-                                translated_current_clusters.push_back(new_id_to_old_id_map[current_clusters[i][j]]);
-                            }
-                            {
-                                std::lock_guard<std::mutex> to_be_clustered_guard(CM::to_be_clustered_mutex);
-                                CM::to_be_clustered_clusters.push(translated_current_clusters);
+                        // assert(current_partition.size() > 1);
+                        if (current_partition.size() > 1) {
+                            std::vector<std::vector<int>> current_clusters = CM::RunClusterOnPartition(&induced_subgraph, algorithm, seed, clustering_parameter, current_partition);
+                            for(size_t i = 0; i < current_clusters.size(); i ++) {
+                                std::vector<int> translated_current_clusters;
+                                for(size_t j = 0; j < current_clusters[i].size(); j ++) {
+                                    translated_current_clusters.push_back(new_id_to_old_id_map[current_clusters[i][j]]);
+                                }
+                                {
+                                    std::lock_guard<std::mutex> to_be_clustered_guard(CM::to_be_clustered_mutex);
+                                    CM::to_be_clustered_clusters.push(translated_current_clusters);
+                                }
                             }
                         }
                     }
