@@ -111,7 +111,11 @@ int main(int argc, char* argv[]) {
         std::string log_file = cm.get<std::string>("--log-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
         std::string connectedness_criterion = cm.get<std::string>("--connectedness-criterion");
-        bool prune = cm.get<bool>("--prune");
+        bool prune = false;
+        if (cm["--prune"] == true) {
+            prune = true;
+            std::cerr << "pruning" << std::endl;
+        }
         std::string mincut_type = cm.get<std::string>("--mincut-type");
         ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, prune, mincut_type);
         random_functions::setSeed(0);
