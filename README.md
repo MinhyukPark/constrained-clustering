@@ -1,5 +1,7 @@
 # Constrained clustering
 #### Notes about recent releases:
+v1.2.1: Fixes floating point issues with threshold calculations
+
 Up until v1.1.1, the default behavior of CM was to use mincut based pruning. Starting with v1.2.0, the default behavior of CM is to not prune. One must use the optional `--prune` flag in order to run CM with pruning.
 
 ## Recommened CC command
