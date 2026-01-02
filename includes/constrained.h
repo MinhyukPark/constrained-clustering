@@ -391,7 +391,9 @@ class ConstrainedClustering {
             /* } */
             if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
                 /* bool node_connectivity = connectedness_criterion_c * std::log(in_partition_size + out_partition_size) / std::log(connectedness_criterion_x) < edge_cut_size; */
-                bool node_connectivity = pre_computed_log * std::log(in_partition_size + out_partition_size) < edge_cut_size;
+                double threshold_value = pre_computed_log * std::log(in_partition_size + out_partition_size);
+                bool is_close = std::abs(threshold_value - edge_cut_size) <= 0.000000001;
+                bool node_connectivity = !is_close && threshold_value < edge_cut_size;
                 return node_connectivity;
             } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
                 bool node_connectivity = connectedness_criterion_c * std::pow(in_partition_size + out_partition_size, connectedness_criterion_x) < edge_cut_size;
