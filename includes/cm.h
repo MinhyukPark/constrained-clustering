@@ -5,7 +5,7 @@
 
 class CM : public ConstrainedClustering {
     public:
-        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, bool prune, std::string mincut_type) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
+        CM(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, std::string history_file, int log_level, std::string connectedness_criterion, bool prune, std::string mincut_type) : ConstrainedClustering(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, history_file, log_level, connectedness_criterion, mincut_type) {
         };
         int main() override;
 
@@ -41,7 +41,9 @@ class CM : public ConstrainedClustering {
         static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, bool prune, std::string mincut_type = "cactus") {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
-                std::vector<int> current_cluster = CM::to_be_mincut_clusters.front();
+                std::pair<std::vector<int>, int> current_front = CM::to_be_mincut_clusters.front();
+                std::vector<int> current_cluster = current_front.first;
+                int current_cluster_id = current_front.second;
                 std::set<int> current_cluster_set(current_cluster.begin(), current_cluster.end());
                 CM::to_be_mincut_clusters.pop();
                 to_be_mincut_lock.unlock();
@@ -123,7 +125,7 @@ class CM : public ConstrainedClustering {
                     current_cluster = std::vector(current_cluster_set.begin(), current_cluster_set.end());
                     {
                         std::lock_guard<std::mutex> done_being_clustered_guard(CM::done_being_clustered_mutex);
-                        CM::done_being_clustered_clusters.push(current_cluster);
+                        CM::done_being_clustered_clusters.push({current_cluster, current_cluster_id});
                     }
                 } else {
                     // do the mincut and actually run a clustering algorithm on both sides
@@ -140,7 +142,7 @@ class CM : public ConstrainedClustering {
                                 }
                                 {
                                     std::lock_guard<std::mutex> to_be_clustered_guard(CM::to_be_clustered_mutex);
-                                    CM::to_be_clustered_clusters.push(translated_current_clusters);
+                                    CM::to_be_clustered_clusters.push({translated_current_clusters, current_cluster_id});
                                 }
                             }
                         }
@@ -156,11 +158,11 @@ class CM : public ConstrainedClustering {
         bool prune;
         static inline std::mutex to_be_mincut_mutex;
         static inline std::condition_variable to_be_mincut_condition_variable;
-        static inline std::queue<std::vector<int>> to_be_mincut_clusters;
+        static inline std::queue<std::pair<std::vector<int>, int>> to_be_mincut_clusters;
         static inline std::mutex to_be_clustered_mutex;
-        static inline std::queue<std::vector<int>> to_be_clustered_clusters;
+        static inline std::queue<std::pair<std::vector<int>, int>> to_be_clustered_clusters;
         static inline std::mutex done_being_clustered_mutex;
-        static inline std::queue<std::vector<int>> done_being_clustered_clusters;
+        static inline std::queue<std::pair<std::vector<int>, int>> done_being_clustered_clusters;
 };
 
 #endif

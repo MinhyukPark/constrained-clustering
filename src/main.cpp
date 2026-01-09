@@ -44,6 +44,9 @@ int main(int argc, char* argv[]) {
     cm.add_argument("--log-file")
         .required()
         .help("Output log file");
+    cm.add_argument("--history-file")
+        .required()
+        .help("Output history file");
     cm.add_argument("--log-level")
         .default_value(int(1))
         .help("Log level where 0 = silent, 1 = info, 2 = verbose")
@@ -109,6 +112,7 @@ int main(int argc, char* argv[]) {
         int num_processors = cm.get<int>("--num-processors");
         std::string output_file = cm.get<std::string>("--output-file");
         std::string log_file = cm.get<std::string>("--log-file");
+        std::string history_file = cm.get<std::string>("--history-file");
         int log_level = cm.get<int>("--log-level") - 1; // so that enum is cleaner
         std::string connectedness_criterion = cm.get<std::string>("--connectedness-criterion");
         bool prune = false;
@@ -117,7 +121,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "pruning" << std::endl;
         }
         std::string mincut_type = cm.get<std::string>("--mincut-type");
-        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, prune, mincut_type);
+        ConstrainedClustering* connectivity_modifier = new CM(edgelist, algorithm, clustering_parameter, existing_clustering, num_processors, output_file, log_file, history_file, log_level, connectedness_criterion, prune, mincut_type);
         random_functions::setSeed(0);
         connectivity_modifier->main();
         delete connectivity_modifier;
