@@ -16,7 +16,7 @@ int ConstrainedClustering::FindMaxClusterId(const std::map<int, std::vector<int>
             max_cluster_id = cluster_id;
             is_first = false;
         }
-        max_cluster_id = std::max(cluster_id, cluster_id);
+        max_cluster_id = std::max(max_cluster_id, cluster_id);
     }
     return max_cluster_id;
 }
