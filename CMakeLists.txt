@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.23)
 #[[ In-source build check ]]
-if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     message(FATAL_ERROR "In-source builds are not allowed.")
     message(WARNING "Remove CMakeFiles/ and CMakeCache.txt in the\
             source root before building again.")
 else()
     #[[ Set project version ]]
     project(consensus_clustering)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib/cmake/igraph)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib/cmake/libleidenalg)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/igraph)
-    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/external_libs/lib64/cmake/libleidenalg)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/lib/cmake/igraph)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/lib/cmake/libleidenalg)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/lib64/cmake/igraph)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/lib64/cmake/libleidenalg)
     find_package(igraph 1.0.0 CONFIG REQUIRED)
     find_package(libleidenalg 0.11 CONFIG REQUIRED)
     find_package(OpenMP REQUIRED)
@@ -34,13 +34,13 @@ else()
     # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -DNDEBUG -march=native")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer")
     # File paths
-    set(SOURCE_MAIN ${CMAKE_SOURCE_DIR}/src/main.cpp)
+    set(SOURCE_MAIN ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
     set(SOURCE_INTERNAL_LIBS
-        ${CMAKE_SOURCE_DIR}/src/constrained.cpp
-        ${CMAKE_SOURCE_DIR}/src/cm.cpp
-        ${CMAKE_SOURCE_DIR}/src/mincut_only.cpp
-        ${CMAKE_SOURCE_DIR}/src/mincut_custom.cpp
-        ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx/tlx/logger.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/constrained.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/cm.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/mincut_only.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/mincut_custom.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/VieCut/extlib/tlx/tlx/logger.cpp
     )
     #[[ CONSTANTS END ]]
 
@@ -51,11 +51,11 @@ else()
     #[[ Link internal libraries ]]
     add_library(internal_libs ${SOURCE_INTERNAL_LIBS})
     target_include_directories(internal_libs
-        PUBLIC ${CMAKE_SOURCE_DIR}/includes
-        PUBLIC ${CMAKE_SOURCE_DIR}/src
-        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/lib
-        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/VieCut/extlib/tlx
-        PUBLIC ${CMAKE_SOURCE_DIR}/external_libs/pcg-cpp/include
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includes
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/VieCut/lib
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/VieCut/extlib/tlx
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external_libs/pcg-cpp/include
     )
     target_link_libraries(internal_libs PUBLIC igraph::igraph)
     target_link_libraries(internal_libs PUBLIC libleidenalg::libleidenalg)
@@ -67,4 +67,4 @@ else()
     target_link_libraries(constrained_clustering PUBLIC external_libs)
 
     #[[ Link external libraries ]]
-endif("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+endif("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
