@@ -1,6 +1,6 @@
 #[[ CONSTANTS ]]
 set(LIBRARY_SOURCES
-    ${CMAKE_SOURCE_DIR}/libs/library.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/library.cpp)
 #[[ CONSTANTS END ]]
 
 #[[ Create external library ]]
