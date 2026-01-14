@@ -1,5 +1,26 @@
 #include "constrained.h"
 
+std::map<int, std::vector<int>> ConstrainedClustering::ReverseMap(const std::map<int, int>& node_id_to_cluster_id_map) {
+    std::map<int, std::vector<int>> reversed_map;
+    for (auto const& [node_id, cluster_id] : node_id_to_cluster_id_map) {
+        reversed_map[cluster_id].push_back(node_id);
+    }
+    return reversed_map;
+}
+
+int ConstrainedClustering::FindMaxClusterId(const std::map<int, std::vector<int>>& cluster_id_to_node_id_map) {
+    bool is_first = true;
+    int max_cluster_id = -1;
+    for (auto const& [cluster_id, cluster_member_vec] : cluster_id_to_node_id_map) {
+        if (is_first) {
+            max_cluster_id = cluster_id;
+            is_first = false;
+        }
+        max_cluster_id = std::max(max_cluster_id, cluster_id);
+    }
+    return max_cluster_id;
+}
+
 std::map<int, std::string> ConstrainedClustering::InvertMap(const std::map<std::string, int>& original_to_new_id_map) {
     std::map<int, std::string> new_to_original_id_map;
     for(auto const& [original_id, new_id] : original_to_new_id_map) {
@@ -75,6 +96,40 @@ void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgel
     }
     igraph_add_edges(graph, &edges, NULL);
     igraph_vector_int_destroy(&edges);
+}
+
+void ConstrainedClustering::WriteClusterHistory(const std::map<int, std::vector<int>>& parent_to_child_map) {
+    std::ofstream history_output(this->history_file);
+    for (auto const& [parent_id, children_vec] : parent_to_child_map) {
+        history_output << parent_id << ":";
+        for (size_t i = 0; i < children_vec.size(); i ++) {
+            if (i != 0) {
+                history_output << ",";
+            }
+            history_output << children_vec.at(i);
+        }
+        history_output << "\n";
+    }
+    history_output.close();
+}
+
+void ConstrainedClustering::WriteClusterQueue(std::queue<std::pair<std::vector<int>, int>>& cluster_queue, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map) {
+    std::ofstream clustering_output(this->output_file);
+    this->WriteToLogFile("final clusters:", Log::debug);
+    clustering_output << "node_id,cluster_id" << '\n';
+    while(!cluster_queue.empty()) {
+        std::pair<std::vector<int>, int> current_front = cluster_queue.front();
+        std::vector<int> current_cluster = current_front.first;
+        int current_cluster_id = current_front.second;
+        cluster_queue.pop();
+        this->WriteToLogFile("new cluster", Log::debug);
+        for(size_t i = 0; i < current_cluster.size(); i ++) {
+            this->WriteToLogFile(std::to_string(current_cluster[i]), Log::debug);
+            /* clustering_output << VAS(graph, "name", current_cluster[i]) << "," << current_cluster_id << '\n'; */
+            clustering_output << new_to_original_id_map.at(current_cluster[i]) << "," << current_cluster_id << '\n';
+        }
+    }
+    clustering_output.close();
 }
 
 void ConstrainedClustering::WriteClusterQueue(std::queue<std::vector<int>>& cluster_queue, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map) {

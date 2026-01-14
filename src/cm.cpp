@@ -13,19 +13,47 @@ int CM::main() {
 
     int after_mincut_number_of_clusters = -2;
     int iter_count = 0;
-
+    std::map<int, int> node_id_to_cluster_id_map;
     if(this->existing_clustering == "") {
         int seed = 0;
-        std::map<int, int> node_id_to_cluster_id_map = ConstrainedClustering::GetCommunities("", this->algorithm, seed, this->clustering_parameter, &graph);
+        node_id_to_cluster_id_map = ConstrainedClustering::GetCommunities("", this->algorithm, seed, this->clustering_parameter, &graph);
         ConstrainedClustering::RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
     } else if(this->existing_clustering != "") {
-        std::map<int, int> new_node_id_to_cluster_id_map = ConstrainedClustering::ReadCommunities(original_to_new_id_map, this->existing_clustering);
-        ConstrainedClustering::RemoveInterClusterEdges(&graph, new_node_id_to_cluster_id_map);
+        node_id_to_cluster_id_map = ConstrainedClustering::ReadCommunities(original_to_new_id_map, this->existing_clustering);
+        ConstrainedClustering::RemoveInterClusterEdges(&graph, node_id_to_cluster_id_map);
     }
+    std::map<int, std::vector<int>> cluster_id_to_node_id_map = ConstrainedClustering::ReverseMap(node_id_to_cluster_id_map); // graph node id
+    int next_cluster_id = ConstrainedClustering::FindMaxClusterId(cluster_id_to_node_id_map) + 1;
 
+    std::map<int, std::vector<int>> parent_to_child_map;
     std::vector<std::vector<int>> connected_components_vector = ConstrainedClustering::GetConnectedComponents(&graph);
     for(size_t i = 0; i < connected_components_vector.size(); i ++) {
-        CM::to_be_mincut_clusters.push(connected_components_vector[i]);
+        int parent_cluster_id = -1; // -1 indicates root
+        int current_cluster_id = -1;
+
+        int first_node_in_subcluster = connected_components_vector[i][0];
+        int original_cluster_id_of_first_node_in_subcluster = node_id_to_cluster_id_map.at(first_node_in_subcluster);
+        int size_of_original_cluster = cluster_id_to_node_id_map[original_cluster_id_of_first_node_in_subcluster].size();
+        int size_of_sub_cluster = connected_components_vector[i].size();
+        if (size_of_original_cluster == size_of_sub_cluster) {
+            current_cluster_id = original_cluster_id_of_first_node_in_subcluster;
+        } else {
+            bool original_cluster_id_of_first_node_in_subcluster_found = false;
+            for (size_t j = 0; j < parent_to_child_map[-1].size(); j ++) {
+                if (parent_to_child_map[-1][j] == original_cluster_id_of_first_node_in_subcluster) {
+                    original_cluster_id_of_first_node_in_subcluster_found = true;
+                    break;
+                }
+            }
+            if (!original_cluster_id_of_first_node_in_subcluster_found) {
+                parent_to_child_map[-1].push_back(original_cluster_id_of_first_node_in_subcluster);
+            }
+            parent_cluster_id = original_cluster_id_of_first_node_in_subcluster;
+            current_cluster_id = next_cluster_id;
+            next_cluster_id ++;
+        }
+        parent_to_child_map[parent_cluster_id].push_back(current_cluster_id);
+        CM::to_be_mincut_clusters.push({connected_components_vector[i], current_cluster_id});
     }
     int previous_done_being_clustered_size = 0;
     while (true) {
@@ -36,7 +64,7 @@ int CM::main() {
         this->WriteToLogFile(std::to_string(CM::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut", Log::debug);
         /* if a thread gets a cluster {-1}, then they know processing is done and they can stop working */
         for(int i = 0; i < this->num_processors; i ++) {
-            CM::to_be_mincut_clusters.push({-1});
+            CM::to_be_mincut_clusters.push({{-1}, -1});
         }
         std::vector<std::thread> thread_vector;
         for(int i = 0; i < this->num_processors; i ++) {
@@ -58,7 +86,10 @@ int CM::main() {
             break;
         } else {
             while(!CM::to_be_clustered_clusters.empty()) {
-                CM::to_be_mincut_clusters.push(CM::to_be_clustered_clusters.front());
+                std::pair<std::vector<int>, int> current_front = CM::to_be_clustered_clusters.front(); // second here is the parent cluster id
+                parent_to_child_map[current_front.second].push_back(next_cluster_id);
+                CM::to_be_mincut_clusters.push({current_front.first, next_cluster_id});
+                next_cluster_id ++;
                 CM::to_be_clustered_clusters.pop();
             }
         }
@@ -68,6 +99,7 @@ int CM::main() {
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
     this->WriteClusterQueue(CM::done_being_clustered_clusters, &graph, new_to_originial_id_map);
+    this->WriteClusterHistory(parent_to_child_map);
     igraph_destroy(&graph);
     return 0;
 }

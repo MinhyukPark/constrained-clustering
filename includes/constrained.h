@@ -12,6 +12,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
+#include <utility>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -23,7 +24,7 @@ enum ConnectednessCriterion {Simple, Logarithimic, Exponential};
 
 class ConstrainedClustering {
     public:
-        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type = "") : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), log_level(log_level), connectedness_criterion(connectedness_criterion), mincut_type(mincut_type) {
+        ConstrainedClustering(std::string edgelist, std::string algorithm, double clustering_parameter, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, std::string history_file, int log_level, std::string connectedness_criterion, std::string mincut_type = "") : edgelist(edgelist), algorithm(algorithm), clustering_parameter(clustering_parameter), existing_clustering(existing_clustering), num_processors(num_processors), output_file(output_file), log_file(log_file), history_file(history_file), log_level(log_level), connectedness_criterion(connectedness_criterion), mincut_type(mincut_type) {
             if(this->log_level > -1) {
                 this->start_time = std::chrono::steady_clock::now();
                 this->log_file_handle.open(this->log_file);
@@ -42,7 +43,11 @@ class ConstrainedClustering {
         int WriteToLogFile(std::string message, Log message_type);
         void WritePartitionMap(std::map<int,int>& final_partition);
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
+        void WriteClusterQueue(std::queue<std::pair<std::vector<int>, int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
         void InitializeConnectednessCriterion();
+        std::map<int, std::vector<int>> ReverseMap(const std::map<int, int>& node_id_to_cluster_id_map);
+        int FindMaxClusterId(const std::map<int, std::vector<int>>& cluster_id_to_node_id_map);
+        void WriteClusterHistory(const std::map<int, std::vector<int>>& parent_to_child_map);
 
         std::map<std::string, int> GetOriginalToNewIdMap(std::string edgelist);
         std::map<int, std::string> InvertMap(const std::map<std::string, int>& original_to_new_id_map);
@@ -447,6 +452,7 @@ class ConstrainedClustering {
         int num_processors;
         std::string output_file;
         std::string log_file;
+        std::string history_file;
         std::chrono::steady_clock::time_point start_time;
         std::ofstream log_file_handle;
         int log_level;

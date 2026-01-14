@@ -1,6 +1,7 @@
 #include "mincut_custom.h"
 
 int MinCutCustom::ComputeMinCut() {
+    /*
     igraph_vector_int_t node_degrees;
     igraph_vector_int_init(&node_degrees, igraph_vcount(this->graph));
     igraph_degree(this->graph, &node_degrees, igraph_vss_all(), IGRAPH_ALL, IGRAPH_NO_LOOPS);
@@ -12,7 +13,6 @@ int MinCutCustom::ComputeMinCut() {
         }
     }
     if(one_degree_node != -1) {
-        /* std::cerr<< "one degree node found" <<std::endl; */
         this->in_partition.push_back(one_degree_node);
         for(int i = 0; i < igraph_vcount(this->graph); i ++) {
             if(i != one_degree_node) {
@@ -23,6 +23,7 @@ int MinCutCustom::ComputeMinCut() {
         return 1;
     }
     igraph_vector_int_destroy(&node_degrees);
+    */
 
     int edge_cut_size = -1;
     auto cfg = configuration::getConfig();

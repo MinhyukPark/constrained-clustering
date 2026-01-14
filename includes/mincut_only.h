@@ -6,7 +6,7 @@
 
 class MincutOnly : public ConstrainedClustering {
     public:
-        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type) : ConstrainedClustering(edgelist, "", -1, existing_clustering, num_processors, output_file, log_file, log_level, connectedness_criterion, mincut_type) {
+        MincutOnly(std::string edgelist, std::string existing_clustering, int num_processors, std::string output_file, std::string log_file, int log_level, std::string connectedness_criterion, std::string mincut_type) : ConstrainedClustering(edgelist, "", -1, existing_clustering, num_processors, output_file, log_file, "", log_level, connectedness_criterion, mincut_type) {
         };
         int main() override;
 
