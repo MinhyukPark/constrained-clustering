@@ -32,19 +32,28 @@ int CM::main() {
         int current_cluster_id = -1;
 
         int first_node_in_subcluster = connected_components_vector[i][0];
-        int original_cluster_id_of_first_node_in_subcluster = node_id_to_cluster_id_map[first_node_in_subcluster];
-        int size_of_original_cluster = cluster_id_to_node_id_map[first_node_in_subcluster].size();
+        int original_cluster_id_of_first_node_in_subcluster = node_id_to_cluster_id_map.at(first_node_in_subcluster);
+        int size_of_original_cluster = cluster_id_to_node_id_map[original_cluster_id_of_first_node_in_subcluster].size();
         int size_of_sub_cluster = connected_components_vector[i].size();
         if (size_of_original_cluster == size_of_sub_cluster) {
             current_cluster_id = original_cluster_id_of_first_node_in_subcluster;
         } else {
-            parent_to_child_map[-1].push_back(original_cluster_id_of_first_node_in_subcluster);
+            bool original_cluster_id_of_first_node_in_subcluster_found = false;
+            for (size_t j = 0; j < parent_to_child_map[-1].size(); j ++) {
+                if (parent_to_child_map[-1][j] == original_cluster_id_of_first_node_in_subcluster) {
+                    original_cluster_id_of_first_node_in_subcluster_found = true;
+                    break;
+                }
+            }
+            if (!original_cluster_id_of_first_node_in_subcluster_found) {
+                parent_to_child_map[-1].push_back(original_cluster_id_of_first_node_in_subcluster);
+            }
             parent_cluster_id = original_cluster_id_of_first_node_in_subcluster;
             current_cluster_id = next_cluster_id;
             next_cluster_id ++;
         }
-        CM::to_be_mincut_clusters.push({connected_components_vector[i], current_cluster_id});
         parent_to_child_map[parent_cluster_id].push_back(current_cluster_id);
+        CM::to_be_mincut_clusters.push({connected_components_vector[i], current_cluster_id});
     }
     int previous_done_being_clustered_size = 0;
     while (true) {
