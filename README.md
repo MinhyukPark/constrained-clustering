@@ -1,5 +1,7 @@
 # Constrained clustering
 #### Notes about recent releases:
+v1.2.3: Adds Infomap support
+v1.2.2: Adds history feature
 v1.2.1: Fixes floating point issues with threshold calculations
 
 Up until v1.1.1, the default behavior of CM was to use mincut based pruning. Starting with v1.2.0, the default behavior of CM is to not prune. One must use the optional `--prune` flag in order to run CM with pruning.
@@ -64,7 +66,7 @@ Optional arguments:
   -h, --help                shows help message and exits
   -v, --version             prints version information and exits
   --edgelist                Network edge-list file [required]
-  --algorithm               Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)
+  --algorithm               Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain, infomap)
   --clustering-parameter    Resolution value for leiden-cpm. Only used if --algorithm is leiden-cpm [default: 0.01]
   --existing-clustering     Existing clustering file [default: ""]
   --num-processors          Number of processors [default: 1]

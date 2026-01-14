@@ -236,6 +236,41 @@ class ConstrainedClustering {
             igraph_eit_destroy(&eit);
         }
 
+        static inline void RunInfomapAndUpdatePartition(std::map<int, int>& partition_map, int seed, igraph_t* graph) {
+            igraph_vector_int_t membership;
+            igraph_vector_int_init(&membership, 0);
+            igraph_rng_seed(igraph_rng_default(), seed);
+            igraph_community_infomap(graph, NULL, NULL, 1, false, 1, &membership, NULL);
+            // igraph_error_t igraph_community_infomap(
+            //     const igraph_t *graph,
+            //     const igraph_vector_t *edge_weights,
+            //     const igraph_vector_t *vertex_weights,
+            //     igraph_int_t nb_trials,
+            //     igraph_bool_t is_regularized,
+            //     igraph_real_t regularization_strength,
+            //     igraph_vector_int_t *membership,
+            //     igraph_real_t *codelength);
+
+            igraph_eit_t eit;
+            igraph_eit_create(graph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
+            std::set<int> visited;
+            for (; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
+                igraph_integer_t current_edge = IGRAPH_EIT_GET(eit);
+                int from_node = IGRAPH_FROM(graph, current_edge);
+                int to_node = IGRAPH_TO(graph, current_edge);
+                if(!visited.contains(from_node)) {
+                    visited.insert(from_node);
+                    partition_map[from_node] = VECTOR(membership)[from_node];
+                }
+                if(!visited.contains(to_node)) {
+                    visited.insert(to_node);
+                    partition_map[to_node] = VECTOR(membership)[to_node];
+                }
+            }
+            igraph_eit_destroy(&eit);
+            igraph_vector_int_destroy(&membership);
+        }
+
 
         static inline void RunLouvainAndUpdatePartition(std::map<int, int>& partition_map, int seed, igraph_t* graph) {
             igraph_vector_int_t membership;
@@ -343,7 +378,9 @@ class ConstrainedClustering {
                 Graph leiden_graph(&graph);
                 ModularityVertexPartition partition(&leiden_graph);
                 ConstrainedClustering::RunLeidenAndUpdatePartition(partition_map, &partition, seed, &graph);
-            } else {
+            } else if (algorithm == "infomap") {
+                ConstrainedClustering::RunInfomapAndUpdatePartition(partition_map, seed, &graph);
+            }else {
                 throw std::invalid_argument("GetCommunities(): Unsupported algorithm");
             }
 

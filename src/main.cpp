@@ -19,13 +19,13 @@ int main(int argc, char* argv[]) {
         .required()
         .help("Network edge-list file");
     cm.add_argument("--algorithm")
-        .help("Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain)")
+        .help("Clustering algorithm to be used (leiden-cpm, leiden-mod, louvain, infomap)")
         .action([](const std::string& value) {
-            static const std::vector<std::string> choices = {"leiden-cpm", "leiden-mod", "louvain"};
+            static const std::vector<std::string> choices = {"leiden-cpm", "leiden-mod", "louvain", "infomap"};
             if (std::find(choices.begin(), choices.end(), value) != choices.end()) {
                 return value;
             }
-            throw std::invalid_argument("--algorithm can only take in leiden-cpm, leiden-mod, or louvain.");
+            throw std::invalid_argument("--algorithm can only take in leiden-cpm, leiden-mod, louvain, or infomap.");
         });
     cm.add_argument("--clustering-parameter")
         .default_value(double(0.01))
