@@ -80,7 +80,7 @@ class CM : public ConstrainedClustering {
                     std::vector<int> out_partition_candidate = mcc.GetOutPartition();
                     is_well_connected = ConstrainedClustering::IsWellConnected(current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, in_partition_candidate.size(), out_partition_candidate.size(), edge_cut_size);
                     is_non_trivial_cut = in_partition_candidate.size() > 1 && out_partition_candidate.size() > 1;
-                    if(prune || is_well_connected || is_non_trivial_cut) {
+                    if(!prune || is_well_connected || is_non_trivial_cut) {
                         in_partition = in_partition_candidate;
                         out_partition = out_partition_candidate;
                         break;
