@@ -1,5 +1,6 @@
 # Constrained clustering
 #### Notes about recent releases:
+v1.2.4: Fixes bug with prune flag. Prior versions had the opposite behavior for the prune flag where pruning occurred when the flag was not set.
 v1.2.3: Adds Infomap support
 v1.2.2: Adds history feature
 v1.2.1: Fixes floating point issues with threshold calculations
