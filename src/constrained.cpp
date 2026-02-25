@@ -31,11 +31,40 @@ std::map<int, std::string> ConstrainedClustering::InvertMap(const std::map<std::
 
 std::map<std::string, int> ConstrainedClustering::GetOriginalToNewIdMap(std::string edgelist) {
     std::map<std::string, int> original_to_new_id_map;
+    int next_node_id = 0;
+
+    if (is_binary_edgelist(edgelist)) {
+        std::ifstream file(edgelist, std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open binary edgelist: " + edgelist);
+        }
+        uint32_t num_edges;
+        file.read(reinterpret_cast<char*>(&num_edges), sizeof(num_edges));
+
+        for (uint32_t i = 0; i < num_edges; ++i) {
+            int32_t source, target;
+            file.read(reinterpret_cast<char*>(&source), sizeof(source));
+            file.read(reinterpret_cast<char*>(&target), sizeof(target));
+
+            std::string source_str = std::to_string(source);
+            std::string target_str = std::to_string(target);
+
+            if (!original_to_new_id_map.contains(source_str)) {
+                original_to_new_id_map[source_str] = next_node_id++;
+            }
+            if (!original_to_new_id_map.contains(target_str)) {
+                original_to_new_id_map[target_str] = next_node_id++;
+            }
+        }
+        this->num_edges = static_cast<int>(num_edges);
+        return original_to_new_id_map;
+    }
+
+    // Text path (fallback)
     char delimiter = get_delimiter(edgelist);
     std::ifstream edgelist_file(edgelist);
     std::string line;
     int line_no = 0;
-    int next_node_id = 0;
     while(std::getline(edgelist_file, line)) {
         std::stringstream ss(line);
         std::string current_value;
@@ -64,8 +93,33 @@ std::map<std::string, int> ConstrainedClustering::GetOriginalToNewIdMap(std::str
 }
 
 void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map) {
-    /* igraph_setup(); */
     igraph_add_vertices(graph, original_to_new_id_map.size(), NULL);
+
+    if (is_binary_edgelist(edgelist)) {
+        std::ifstream file(edgelist, std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open binary edgelist: " + edgelist);
+        }
+        uint32_t num_edges;
+        file.read(reinterpret_cast<char*>(&num_edges), sizeof(num_edges));
+
+        igraph_vector_int_t edges;
+        igraph_vector_int_init(&edges, num_edges * 2);
+        int edge_index = 0;
+        for (uint32_t i = 0; i < num_edges; ++i) {
+            int32_t source, target;
+            file.read(reinterpret_cast<char*>(&source), sizeof(source));
+            file.read(reinterpret_cast<char*>(&target), sizeof(target));
+
+            VECTOR(edges)[edge_index++] = original_to_new_id_map.at(std::to_string(source));
+            VECTOR(edges)[edge_index++] = original_to_new_id_map.at(std::to_string(target));
+        }
+        igraph_add_edges(graph, &edges, NULL);
+        igraph_vector_int_destroy(&edges);
+        return;
+    }
+
+    // Text path (fallback)
     char delimiter = get_delimiter(edgelist);
     std::ifstream edgelist_file(edgelist);
     std::string line;
@@ -86,7 +140,6 @@ void ConstrainedClustering::LoadEdgesFromFile(igraph_t* graph, std::string edgel
         }
         std::string source = current_line[0];
         std::string target = current_line[1];
-        /* igraph_add_edge(graph, original_to_new_id_map.at(source), original_to_new_id_map.at(target)); */
         VECTOR(edges)[edge_index] = original_to_new_id_map.at(source);
         edge_index ++;
         VECTOR(edges)[edge_index] = original_to_new_id_map.at(target);

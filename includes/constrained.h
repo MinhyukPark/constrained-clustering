@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <utility>
+#include <cstdint>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -54,6 +55,19 @@ class ConstrainedClustering {
 
         void LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map);
 
+        static inline bool has_suffix(const std::string& filepath, const std::string& suffix) {
+            if (filepath.size() < suffix.size()) return false;
+            return filepath.compare(filepath.size() - suffix.size(), suffix.size(), suffix) == 0;
+        }
+
+        static inline bool is_binary_edgelist(const std::string& filepath) {
+            return has_suffix(filepath, ".bedgelist");
+        }
+
+        static inline bool is_binary_cluster(const std::string& filepath) {
+            return has_suffix(filepath, ".bcluster");
+        }
+
         static inline char get_delimiter(std::string filepath) {
             std::ifstream clustering(filepath);
             std::string line;
@@ -70,6 +84,27 @@ class ConstrainedClustering {
 
         static inline std::map<int, int> ReadCommunities(const std::map<std::string, int>& original_to_new_id_map, std::string existing_clustering) {
             std::map<int, int> partition_map;
+
+            if (is_binary_cluster(existing_clustering)) {
+                std::ifstream file(existing_clustering, std::ios::binary);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open binary cluster: " + existing_clustering);
+                }
+                uint32_t num_entries;
+                file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+                for (uint32_t i = 0; i < num_entries; ++i) {
+                    int32_t node_id, cluster_id;
+                    file.read(reinterpret_cast<char*>(&node_id), sizeof(node_id));
+                    file.read(reinterpret_cast<char*>(&cluster_id), sizeof(cluster_id));
+                    std::string node_str = std::to_string(node_id);
+                    if (original_to_new_id_map.contains(node_str)) {
+                        partition_map[original_to_new_id_map.at(node_str)] = cluster_id;
+                    }
+                }
+                return partition_map;
+            }
+
+            // Text path (fallback)
             char delimiter = get_delimiter(existing_clustering);
             std::ifstream existing_clustering_file(existing_clustering);
             std::string line;
@@ -98,6 +133,24 @@ class ConstrainedClustering {
 
         static inline std::map<int, int> ReadCommunities(std::string existing_clustering) {
             std::map<int, int> partition_map;
+
+            if (is_binary_cluster(existing_clustering)) {
+                std::ifstream file(existing_clustering, std::ios::binary);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open binary cluster: " + existing_clustering);
+                }
+                uint32_t num_entries;
+                file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+                for (uint32_t i = 0; i < num_entries; ++i) {
+                    int32_t node_id, cluster_id;
+                    file.read(reinterpret_cast<char*>(&node_id), sizeof(node_id));
+                    file.read(reinterpret_cast<char*>(&cluster_id), sizeof(cluster_id));
+                    partition_map[node_id] = cluster_id;
+                }
+                return partition_map;
+            }
+
+            // Text path (fallback)
             std::ifstream existing_clustering_file(existing_clustering);
             int node_id = -1;
             int cluster_id = -1;
