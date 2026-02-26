@@ -8,7 +8,7 @@ v1.2.1: Fixes floating point issues with threshold calculations \\
 Up until v1.1.1, the default behavior of CM was to use mincut based pruning. Starting with v1.2.0, the default behavior of CM is to not prune. One must use the optional `--prune` flag in order to run CM with pruning.
 
 ## Pruning details
-The CM algorithm necessarily repeats rounds of mincut and re-clustering until the connectivity criterion is reached. In this implementation, a shortcut is available via the flag `--prune` where a mincut can be followed by another mincut if the mincut divides the cluster into a single node and the rest of the cluster. This process continues until a mincut is identified that splits the cluster into two parts where neither of the parts is a single node, at which point CM continues normally by proceeding with the re-clustering step on both sides.
+The CM algorithm necessarily repeats rounds of mincut and re-clustering until the connectivity criterion is reached. In this implementation, a shortcut is available via the flag `--prune` where a mincut can be followed by another mincut if two conditions are satisfied: 1. the mincut divides the cluster into a single node and the rest of the cluster and 2. the cluster at its present state is not well-connected according to the connectivity criterion. This process continues until either a mincut is identified that splits the cluster into two parts where neither of the parts is a single node, at which point CM continues normally by proceeding with the re-clustering step on both sides, or the cluster is well-connected, at which point CM will add the cluster to its final output set.
 
 ## Recommened CC command
 CC returns the connected components of each cluster as its own cluster
