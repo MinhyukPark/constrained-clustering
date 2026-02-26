@@ -1,11 +1,14 @@
 # Constrained clustering
 #### Notes about recent releases:
-v1.2.4: Fixes bug with prune flag. Prior versions had the opposite behavior for the prune flag where pruning occurred when the flag was not set.
-v1.2.3: Adds Infomap support
-v1.2.2: Adds history feature
-v1.2.1: Fixes floating point issues with threshold calculations
+v1.2.4: Fixes bug with prune flag. Prior versions had the opposite behavior for the prune flag where pruning occurred when the flag was not set. \\
+v1.2.3: Adds Infomap support \\
+v1.2.2: Adds history feature \\
+v1.2.1: Fixes floating point issues with threshold calculations \\
 
 Up until v1.1.1, the default behavior of CM was to use mincut based pruning. Starting with v1.2.0, the default behavior of CM is to not prune. One must use the optional `--prune` flag in order to run CM with pruning.
+
+## Pruning details
+The CM algorithm necessarily repeats rounds of mincut and re-clustering until the connectivity criterion is reached. In this implementation, a shortcut is available via the flag `--prune` where a mincut can be followed by another mincut if the mincut divides the cluster into a single node and the rest of the cluster. This process continues until a mincut is identified that splits the cluster into two parts where neither of the parts is a single node, at which point CM continues normally by proceeding with the re-clustering step on both sides.
 
 ## Recommened CC command
 CC returns the connected components of each cluster as its own cluster
