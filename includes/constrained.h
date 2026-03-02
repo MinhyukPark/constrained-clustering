@@ -9,11 +9,14 @@
 #include <random>
 #include <thread>
 #include <map>
+#include <set>
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
 #include <utility>
 #include <cstdint>
+#include <algorithm>
+#include <filesystem>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -46,6 +49,26 @@ class ConstrainedClustering {
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
         void WriteClusterQueue(std::queue<std::pair<std::vector<int>, int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
         void InitializeConnectednessCriterion();
+
+        // Yield support: when enabled, large sub-clusters are written to yield_dir
+        // instead of being processed locally, allowing the distributed system to
+        // redistribute them to other workers.
+        struct YieldRecord {
+            int yield_id;
+            int node_count;
+            int edge_count;
+        };
+
+        void set_yield_config(const std::string& dir, int threshold, int fd = -1) {
+            yield_dir = dir;
+            yield_node_threshold = threshold;
+            yield_fd = fd;
+        }
+
+        void WriteYieldCluster(const igraph_t* graph,
+                               const std::vector<int>& cluster_nodes,
+                               const std::map<int, std::string>& new_to_original_id_map);
+        void WriteYieldSummary();
         std::map<int, std::vector<int>> ReverseMap(const std::map<int, int>& node_id_to_cluster_id_map);
         int FindMaxClusterId(const std::map<int, std::vector<int>>& cluster_id_to_node_id_map);
         void WriteClusterHistory(const std::map<int, std::vector<int>>& parent_to_child_map);
@@ -553,6 +576,13 @@ class ConstrainedClustering {
         double connectedness_criterion_x;
         double pre_computed_log;
         ConnectednessCriterion current_connectedness_criterion;
+
+        // Yield config (disabled by default — empty yield_dir means no yielding)
+        std::string yield_dir;
+        int yield_node_threshold = 0;
+        int yield_fd = -1;  // pipe fd for real-time yield notification (-1 = disabled)
+        int next_yield_id = 0;
+        std::vector<YieldRecord> yield_records;
 };
 
 #endif

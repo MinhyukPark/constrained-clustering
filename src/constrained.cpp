@@ -1,4 +1,5 @@
 #include "constrained.h"
+#include <unistd.h>
 
 std::map<int, std::vector<int>> ConstrainedClustering::ReverseMap(const std::map<int, int>& node_id_to_cluster_id_map) {
     std::map<int, std::vector<int>> reversed_map;
@@ -249,6 +250,101 @@ int ConstrainedClustering::WriteToLogFile(std::string message, Log message_type)
         this->num_calls_to_log_write ++;
     }
     return 0;
+}
+
+void ConstrainedClustering::WriteYieldCluster(const igraph_t* graph,
+                                              const std::vector<int>& cluster_nodes,
+                                              const std::map<int, std::string>& new_to_original_id_map) {
+    int yield_id = this->next_yield_id++;
+
+    // Create yield directory on-demand (only when a yield actually happens)
+    std::filesystem::create_directories(this->yield_dir);
+
+    // Extract induced subgraph (same pattern used throughout the CC codebase)
+    igraph_vector_int_t nodes_to_keep;
+    igraph_vector_int_t new_id_to_old_id_vec;
+    igraph_vector_int_init(&nodes_to_keep, cluster_nodes.size());
+    igraph_vector_int_init(&new_id_to_old_id_vec, cluster_nodes.size());
+    for (size_t i = 0; i < cluster_nodes.size(); i++) {
+        VECTOR(nodes_to_keep)[i] = cluster_nodes[i];
+    }
+    igraph_t induced_subgraph;
+    igraph_induced_subgraph_map(graph, &induced_subgraph,
+        igraph_vss_vector(&nodes_to_keep), IGRAPH_SUBGRAPH_CREATE_FROM_SCRATCH,
+        NULL, &new_id_to_old_id_vec);
+
+    // Iterate edges of the induced subgraph, translate to original IDs
+    std::vector<std::pair<int32_t, int32_t>> edges;
+    igraph_eit_t eit;
+    igraph_eit_create(&induced_subgraph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit);
+    for (; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) {
+        igraph_integer_t edge_id = IGRAPH_EIT_GET(eit);
+        int from_local = IGRAPH_FROM(&induced_subgraph, edge_id);
+        int to_local = IGRAPH_TO(&induced_subgraph, edge_id);
+        int from_global = VECTOR(new_id_to_old_id_vec)[from_local];
+        int to_global = VECTOR(new_id_to_old_id_vec)[to_local];
+        int32_t orig_src = std::stoi(new_to_original_id_map.at(from_global));
+        int32_t orig_tgt = std::stoi(new_to_original_id_map.at(to_global));
+        edges.emplace_back(orig_src, orig_tgt);
+    }
+    igraph_eit_destroy(&eit);
+    igraph_vector_int_destroy(&nodes_to_keep);
+    igraph_vector_int_destroy(&new_id_to_old_id_vec);
+    igraph_destroy(&induced_subgraph);
+
+    // Write .bedgelist (binary)
+    {
+        std::string path = this->yield_dir + "/" + std::to_string(yield_id) + ".bedgelist";
+        std::ofstream out(path, std::ios::binary);
+        uint32_t num_edges = static_cast<uint32_t>(edges.size());
+        out.write(reinterpret_cast<const char*>(&num_edges), sizeof(num_edges));
+        for (const auto& [src, tgt] : edges) {
+            out.write(reinterpret_cast<const char*>(&src), sizeof(src));
+            out.write(reinterpret_cast<const char*>(&tgt), sizeof(tgt));
+        }
+    }
+
+    // Write .bcluster (binary — all nodes map to one cluster)
+    {
+        std::string path = this->yield_dir + "/" + std::to_string(yield_id) + ".bcluster";
+        std::ofstream out(path, std::ios::binary);
+        uint32_t num_entries = static_cast<uint32_t>(cluster_nodes.size());
+        out.write(reinterpret_cast<const char*>(&num_entries), sizeof(num_entries));
+        for (int node : cluster_nodes) {
+            int32_t orig_node = std::stoi(new_to_original_id_map.at(node));
+            int32_t cid = static_cast<int32_t>(yield_id);
+            out.write(reinterpret_cast<const char*>(&orig_node), sizeof(orig_node));
+            out.write(reinterpret_cast<const char*>(&cid), sizeof(cid));
+        }
+    }
+
+    this->yield_records.push_back({yield_id, (int)cluster_nodes.size(), (int)edges.size()});
+
+    // Notify parent process via pipe (if connected)
+    if (this->yield_fd >= 0) {
+        int32_t record[3] = {
+            static_cast<int32_t>(yield_id),
+            static_cast<int32_t>(cluster_nodes.size()),
+            static_cast<int32_t>(edges.size())
+        };
+        // Write atomically (12 bytes < PIPE_BUF, guaranteed atomic on POSIX)
+        ::write(this->yield_fd, record, sizeof(record));
+    }
+
+    this->WriteToLogFile("Yielded sub-cluster " + std::to_string(yield_id) +
+                         " (nodes=" + std::to_string(cluster_nodes.size()) +
+                         ", edges=" + std::to_string(edges.size()) + ")", Log::info);
+}
+
+void ConstrainedClustering::WriteYieldSummary() {
+    if (this->yield_records.empty()) return;
+
+    std::string path = this->yield_dir + "/yield_summary.csv";
+    std::ofstream out(path);
+    out << "yield_id,node_count,edge_count\n";
+    for (const auto& rec : this->yield_records) {
+        out << rec.yield_id << "," << rec.node_count << "," << rec.edge_count << "\n";
+    }
 }
 
 void ConstrainedClustering::InitializeConnectednessCriterion() {
