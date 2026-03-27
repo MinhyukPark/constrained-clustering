@@ -516,6 +516,25 @@ class ConstrainedClustering {
                 // if (criterion == "test_function_1") {
                 //     // check well-connectedness with custom logics
                 // }
+
+                /**
+                 * Consider cluster of size n
+                 * (0, 100] -> threshold = 1
+                 * (100, 500] -> threshold = 2
+                 * (500, inf) -> threshold = sqrt(n) / 10
+                 */
+                if (criterion == "piecewise") {
+                    int cluster_size = in_partition_size + out_partition_size;
+                    if (cluster_size <= 100) {
+                        return edge_cut_size >= 1;
+                    } else if (cluster_size <= 500) {
+                        return edge_cut_size >= 2;
+                    } else {
+                        double threshold_value = 0.1 * std::pow(cluster_size, 0.5);   // sqrt(n) / 10
+                        return edge_cut_size >= threshold_value;
+                    }
+                }
+
                 return false;
             } else {
                 // should not be possible
