@@ -519,19 +519,22 @@ class ConstrainedClustering {
 
                 /**
                  * Consider cluster of size n
-                 * (0, 100] -> threshold = 1
-                 * (100, 500] -> threshold = 2
-                 * (500, inf) -> threshold = sqrt(n) / 10
+                 * (0, 100) -> threshold = 1
+                 * [100, 500] -> threshold = 2
+                 * (500, 999] -> threshold = 3
+                 * (999, inf) -> threshold = ceil( sqrt(n) / 10 )
                  */
                 if (criterion == "piecewise") {
                     int cluster_size = in_partition_size + out_partition_size;
-                    if (cluster_size <= 100) {
+                    if (cluster_size < 100) {   // (0, 100)
                         return edge_cut_size >= 1;
-                    } else if (cluster_size <= 500) {
+                    } else if (cluster_size <= 500) {   // [100, 500]
                         return edge_cut_size >= 2;
-                    } else {
+                    } else if (cluster_size <= 999) {   // (500, 999]
+                        return edge_cut_size >= 3;
+                    } else {    // the rest
                         double threshold_value = 0.1 * std::pow(cluster_size, 0.5);   // sqrt(n) / 10
-                        return edge_cut_size >= threshold_value;
+                        return edge_cut_size >= std::ceil(threshold_value);
                     }
                 }
 
