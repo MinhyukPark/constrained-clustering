@@ -374,10 +374,8 @@ void ConstrainedClustering::InitializeConnectednessCriterion() {
         }
         connectedness_criterion_x = std::stod(this->connectedness_criterion.substr(n_caret_position + 2));
     } else if (this->connectedness_criterion != "0") {
-        // wasn't log or exponent so if it isn't 0 then it's an error
-        // exit
-        this->WriteToLogFile("Colud not parse connectedness_criterion" , Log::error);
-        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are numbers" , Log::error);
+        // wasn't log or exponent and isn't 0, treat as custom criterion
+        current_connectedness_criterion = ConnectednessCriterion::Custom;
     }
     if (current_connectedness_criterion == ConnectednessCriterion::Simple) {
         this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than 0)" , Log::info);
@@ -386,6 +384,8 @@ void ConstrainedClustering::InitializeConnectednessCriterion() {
         pre_computed_log = connectedness_criterion_c / std::log(connectedness_criterion_x);
     } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
         this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than " + std::to_string(connectedness_criterion_c) + " times n to the power of " + std::to_string(connectedness_criterion_x), Log::info);
+    } else if (current_connectedness_criterion == ConnectednessCriterion::Custom) {
+        this->WriteToLogFile("Running with custom connectedness criterion: " + this->connectedness_criterion, Log::info);
     } else {
         // should not possible to reach
         exit(1);
@@ -394,4 +394,5 @@ void ConstrainedClustering::InitializeConnectednessCriterion() {
     this->connectedness_criterion_x = connectedness_criterion_x;
     this->pre_computed_log = pre_computed_log;
     this->current_connectedness_criterion = current_connectedness_criterion;
+    this->connectedness_criterion_custom_string = (current_connectedness_criterion == ConnectednessCriterion::Custom) ? this->connectedness_criterion : "";
 }
