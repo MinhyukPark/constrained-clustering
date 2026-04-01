@@ -104,14 +104,14 @@ int CM::main() {
                 }
 
                 // Only yield when there are 2+ large sub-clusters:
-                // keep the largest locally, yield the rest
+                // keep the largest locally, yield the rest. Logic is that the in-flight time could compensate a bit of the processing time
                 if (large_indices.size() >= 2) {
                     std::sort(large_indices.begin(), large_indices.end(),
                         [&pending](size_t a, size_t b) {
                             return pending[a].first.size() > pending[b].first.size();
                         });
 
-                    // Index 0 is the largest — keep it. Yield indices 1..N.
+                    // Keep index 0 (largest). Yield indices 1..N.
                     for (size_t i = 1; i < large_indices.size(); i++) {
                         yield_indices.insert(large_indices[i]);
                     }

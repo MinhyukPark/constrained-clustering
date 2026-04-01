@@ -110,7 +110,7 @@ int MincutOnly::main() {
                 std::set<size_t> yield_indices;
 
                 // Only yield when there are 2+ large sub-clusters:
-                // keep the largest locally, yield the rest
+                // keep the largest locally, yield the rest. Logic is that the in-flight time could compensate a bit of the processing time
                 if (large_indices.size() >= 2) {
                     std::sort(large_indices.begin(), large_indices.end(),
                         [&pending](size_t a, size_t b) {

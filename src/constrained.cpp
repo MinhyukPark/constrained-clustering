@@ -377,7 +377,7 @@ void ConstrainedClustering::InitializeConnectednessCriterion() {
         // wasn't log or exponent so if it isn't 0 then it's an error
         // exit
         this->WriteToLogFile("Colud not parse connectedness_criterion" , Log::error);
-        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are integers" , Log::error);
+        this->WriteToLogFile("Accepted forms are Clog_x(n), Cn^x, or 0 where C and x are numbers" , Log::error);
     }
     if (current_connectedness_criterion == ConnectednessCriterion::Simple) {
         this->WriteToLogFile("Running with mode (mincut of each cluster has to be greater than 0)" , Log::info);

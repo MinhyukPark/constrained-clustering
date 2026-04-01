@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         .scan<'d', int>();
     cm.add_argument("--connectedness-criterion")
         .default_value("1log_10(n)")
-        .help("String in the form of Clog_x(n) or Cn^x for well-connectedness");
+        .help("String in the form of Clog_x(n) or Cn^x for well-connectedness where C and x are numbers (e.g., 1n^0.5)");
     cm.add_argument("--prune")
         .default_value(false) // default false, implicit true
         .implicit_value(true) // default false, implicit true
