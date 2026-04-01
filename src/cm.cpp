@@ -69,7 +69,7 @@ int CM::main() {
         std::vector<std::thread> thread_vector;
         for(int i = 0; i < this->num_processors; i ++) {
             int seed = 0;
-            thread_vector.push_back(std::thread(CM::MinCutOrClusterWorker, &graph, this->algorithm, seed, this->clustering_parameter, this->current_connectedness_criterion, this->connectedness_criterion_c, this->connectedness_criterion_x, this->pre_computed_log, this->prune, this->mincut_type));
+            thread_vector.push_back(std::thread(CM::MinCutOrClusterWorker, &graph, this->algorithm, seed, this->clustering_parameter, this->current_connectedness_criterion, this->connectedness_criterion_c, this->connectedness_criterion_x, this->pre_computed_log, this->prune, this->connectedness_criterion_custom_string, this->mincut_type));
         }
         /* the results from each thread gets stored in to_be_clustered_clusters */
         for(size_t thread_index = 0; thread_index < thread_vector.size(); thread_index ++) {
@@ -85,17 +85,62 @@ int CM::main() {
             this->WriteToLogFile("Total number of iterations: " + std::to_string(iter_count + 1), Log::info);
             break;
         } else {
+            // Drain into vector for yield analysis
+            std::vector<std::pair<std::vector<int>, int>> pending;
             while(!CM::to_be_clustered_clusters.empty()) {
-                std::pair<std::vector<int>, int> current_front = CM::to_be_clustered_clusters.front(); // second here is the parent cluster id
-                parent_to_child_map[current_front.second].push_back(next_cluster_id);
-                CM::to_be_mincut_clusters.push({current_front.first, next_cluster_id});
-                next_cluster_id ++;
+                pending.push_back(CM::to_be_clustered_clusters.front());
                 CM::to_be_clustered_clusters.pop();
+            }
+
+            std::set<size_t> yield_indices;
+
+            if (!this->yield_dir.empty() && this->yield_node_threshold > 0) {
+                // Find sub-clusters large enough to be worth redistributing
+                std::vector<size_t> large_indices;
+                for (size_t i = 0; i < pending.size(); i++) {
+                    if ((int)pending[i].first.size() >= this->yield_node_threshold) {
+                        large_indices.push_back(i);
+                    }
+                }
+
+                // Only yield when there are 2+ large sub-clusters:
+                // keep the largest locally, yield the rest. Logic is that the in-flight time could compensate a bit of the processing time
+                if (large_indices.size() >= 2) {
+                    std::sort(large_indices.begin(), large_indices.end(),
+                        [&pending](size_t a, size_t b) {
+                            return pending[a].first.size() > pending[b].first.size();
+                        });
+
+                    // Keep index 0 (largest). Yield indices 1..N.
+                    for (size_t i = 1; i < large_indices.size(); i++) {
+                        yield_indices.insert(large_indices[i]);
+                    }
+
+                    for (size_t idx : yield_indices) {
+                        this->WriteYieldCluster(&graph, pending[idx].first, new_to_originial_id_map);
+                    }
+
+                    this->WriteToLogFile("Yielded " + std::to_string(yield_indices.size()) +
+                        " sub-clusters, keeping largest (" +
+                        std::to_string(pending[large_indices[0]].first.size()) + " nodes) locally",
+                        Log::info);
+                }
+            }
+
+            // Push non-yielded sub-clusters back to local queue
+            for (size_t i = 0; i < pending.size(); i++) {
+                if (yield_indices.count(i) == 0) {
+                    parent_to_child_map[pending[i].second].push_back(next_cluster_id);
+                    CM::to_be_mincut_clusters.push({pending[i].first, next_cluster_id});
+                    next_cluster_id++;
+                }
             }
         }
         iter_count ++;
     }
 
+
+    this->WriteYieldSummary();
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
     this->WriteClusterQueue(CM::done_being_clustered_clusters, &graph, new_to_originial_id_map);

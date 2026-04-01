@@ -9,10 +9,14 @@
 #include <random>
 #include <thread>
 #include <map>
+#include <set>
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
 #include <utility>
+#include <cstdint>
+#include <algorithm>
+#include <filesystem>
 
 #include <libleidenalg/GraphHelper.h>
 #include <libleidenalg/Optimiser.h>
@@ -20,7 +24,7 @@
 #include <libleidenalg/ModularityVertexPartition.h>
 
 enum Log {info, debug, error = -1};
-enum ConnectednessCriterion {Simple, Logarithimic, Exponential};
+enum ConnectednessCriterion {Simple, Logarithimic, Exponential, Custom};
 
 class ConstrainedClustering {
     public:
@@ -45,6 +49,26 @@ class ConstrainedClustering {
         void WriteClusterQueue(std::queue<std::vector<int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
         void WriteClusterQueue(std::queue<std::pair<std::vector<int>, int>>& to_be_clustered_clusters, igraph_t* graph, const std::map<int, std::string>& new_to_original_id_map);
         void InitializeConnectednessCriterion();
+
+        // Yield support: when enabled, large sub-clusters are written to yield_dir
+        // instead of being processed locally, allowing the distributed system to
+        // redistribute them to other workers.
+        struct YieldRecord {
+            int yield_id;
+            int node_count;
+            int edge_count;
+        };
+
+        void set_yield_config(const std::string& dir, int threshold, int fd = -1) {
+            yield_dir = dir;
+            yield_node_threshold = threshold;
+            yield_fd = fd;
+        }
+
+        void WriteYieldCluster(const igraph_t* graph,
+                               const std::vector<int>& cluster_nodes,
+                               const std::map<int, std::string>& new_to_original_id_map);
+        void WriteYieldSummary();
         std::map<int, std::vector<int>> ReverseMap(const std::map<int, int>& node_id_to_cluster_id_map);
         int FindMaxClusterId(const std::map<int, std::vector<int>>& cluster_id_to_node_id_map);
         void WriteClusterHistory(const std::map<int, std::vector<int>>& parent_to_child_map);
@@ -53,6 +77,19 @@ class ConstrainedClustering {
         std::map<int, std::string> InvertMap(const std::map<std::string, int>& original_to_new_id_map);
 
         void LoadEdgesFromFile(igraph_t* graph, std::string edgelist, const std::map<std::string, int>& original_to_new_id_map);
+
+        static inline bool has_suffix(const std::string& filepath, const std::string& suffix) {
+            if (filepath.size() < suffix.size()) return false;
+            return filepath.compare(filepath.size() - suffix.size(), suffix.size(), suffix) == 0;
+        }
+
+        static inline bool is_binary_edgelist(const std::string& filepath) {
+            return has_suffix(filepath, ".bedgelist");
+        }
+
+        static inline bool is_binary_cluster(const std::string& filepath) {
+            return has_suffix(filepath, ".bcluster");
+        }
 
         static inline char get_delimiter(std::string filepath) {
             std::ifstream clustering(filepath);
@@ -70,6 +107,27 @@ class ConstrainedClustering {
 
         static inline std::map<int, int> ReadCommunities(const std::map<std::string, int>& original_to_new_id_map, std::string existing_clustering) {
             std::map<int, int> partition_map;
+
+            if (is_binary_cluster(existing_clustering)) {
+                std::ifstream file(existing_clustering, std::ios::binary);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open binary cluster: " + existing_clustering);
+                }
+                uint32_t num_entries;
+                file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+                for (uint32_t i = 0; i < num_entries; ++i) {
+                    int32_t node_id, cluster_id;
+                    file.read(reinterpret_cast<char*>(&node_id), sizeof(node_id));
+                    file.read(reinterpret_cast<char*>(&cluster_id), sizeof(cluster_id));
+                    std::string node_str = std::to_string(node_id);
+                    if (original_to_new_id_map.contains(node_str)) {
+                        partition_map[original_to_new_id_map.at(node_str)] = cluster_id;
+                    }
+                }
+                return partition_map;
+            }
+
+            // Text path (fallback)
             char delimiter = get_delimiter(existing_clustering);
             std::ifstream existing_clustering_file(existing_clustering);
             std::string line;
@@ -98,6 +156,24 @@ class ConstrainedClustering {
 
         static inline std::map<int, int> ReadCommunities(std::string existing_clustering) {
             std::map<int, int> partition_map;
+
+            if (is_binary_cluster(existing_clustering)) {
+                std::ifstream file(existing_clustering, std::ios::binary);
+                if (!file.is_open()) {
+                    throw std::runtime_error("Failed to open binary cluster: " + existing_clustering);
+                }
+                uint32_t num_entries;
+                file.read(reinterpret_cast<char*>(&num_entries), sizeof(num_entries));
+                for (uint32_t i = 0; i < num_entries; ++i) {
+                    int32_t node_id, cluster_id;
+                    file.read(reinterpret_cast<char*>(&node_id), sizeof(node_id));
+                    file.read(reinterpret_cast<char*>(&cluster_id), sizeof(cluster_id));
+                    partition_map[node_id] = cluster_id;
+                }
+                return partition_map;
+            }
+
+            // Text path (fallback)
             std::ifstream existing_clustering_file(existing_clustering);
             int node_id = -1;
             int cluster_id = -1;
@@ -422,15 +498,9 @@ class ConstrainedClustering {
             return edge_cut_size >= 1;
         }
 
-/* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
-/* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
-        static inline bool IsWellConnected(ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, int in_partition_size, int out_partition_size, int edge_cut_size) {
-            /* size_t log_position = connectedness_criterion.find("log") */
-            /* size_t n_caret_position = connectedness_criterion.find("n^") */
-            /* if (log_position != std::string::npos) { */
-            /*     // is log term */
-            /* } else if (n_caret_position != std::string::npos) { */
-            /* } */
+        /* F(n) = C log_x(n), where C and x are parameters specified by the user (our default is C=1 and x=10) */
+        /* G(n) = C n^x, where C and x are parameters specified by the user (here, presumably 0<x<2). Note that x=1 makes it linear. */
+        static inline bool IsWellConnected(ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, int in_partition_size, int out_partition_size, int edge_cut_size, const std::string& criterion = "") {
             if (current_connectedness_criterion == ConnectednessCriterion::Logarithimic) {
                 /* bool node_connectivity = connectedness_criterion_c * std::log(in_partition_size + out_partition_size) / std::log(connectedness_criterion_x) < edge_cut_size; */
                 double threshold_value = pre_computed_log * std::log(in_partition_size + out_partition_size);
@@ -440,45 +510,41 @@ class ConstrainedClustering {
             } else if (current_connectedness_criterion == ConnectednessCriterion::Exponential) {
                 bool node_connectivity = connectedness_criterion_c * std::pow(in_partition_size + out_partition_size, connectedness_criterion_x) < edge_cut_size;
                 return node_connectivity;
+            } else if (current_connectedness_criterion == ConnectednessCriterion::Custom) {
+                // Add custom connectedness criterion checks here.
+                // Example:
+                // if (criterion == "test_function_1") {
+                //     // check well-connectedness with custom logics
+                // }
+
+                /**
+                 * Consider cluster of size n
+                 * (0, 100) -> threshold = 1
+                 * [100, 500] -> threshold = 2
+                 * (500, 999] -> threshold = 3
+                 * (999, inf) -> threshold = ceil( sqrt(n) / 10 )
+                 */
+                if (criterion == "piecewise") {
+                    int cluster_size = in_partition_size + out_partition_size;
+                    if (cluster_size < 100) {   // (0, 100)
+                        return edge_cut_size >= 1;
+                    } else if (cluster_size <= 500) {   // [100, 500]
+                        return edge_cut_size >= 2;
+                    } else if (cluster_size <= 999) {   // (500, 999]
+                        return edge_cut_size >= 3;
+                    } else {    // the rest
+                        double threshold_value = 0.1 * std::pow(cluster_size, 0.5);   // sqrt(n) / 10
+                        return edge_cut_size >= std::ceil(threshold_value);
+                    }
+                }
+
+                return false;
             } else {
                 // should not be possible
             }
             /* return edge_connectivity && node_connectivity; */
             return false;
         }
-
-        /* static inline bool IsWellConnected(const std::vector<int>& in_partition, const std::vector<int>& out_partition, int edge_cut_size, const igraph_t* induced_subgraph) { */
-        /*     if(edge_cut_size == 0) { */
-        /*         return false; */
-        /*     } */
-        /*     /1* double threshold_value = 4; *1/ */
-        /*     /1* double num_edge_in_side = 0; *1/ */
-        /*     /1* double num_edge_out_side = 0; *1/ */
-        /*     /1* if(edge_cut_size != 0) { *1/ */
-        /*     /1*     std::set<int> in_partition_set(in_partition.begin(), in_partition.end()); *1/ */
-        /*     /1*     std::set<int> out_partition_set(out_partition.begin(), out_partition.end()); *1/ */
-        /*     /1*     igraph_eit_t eit; *1/ */
-        /*     /1*     igraph_eit_create(induced_subgraph, igraph_ess_all(IGRAPH_EDGEORDER_ID), &eit); *1/ */
-        /*     /1*     for(; !IGRAPH_EIT_END(eit); IGRAPH_EIT_NEXT(eit)) { *1/ */
-        /*     /1*         igraph_integer_t current_edge = IGRAPH_EIT_GET(eit); *1/ */
-        /*     /1*         int from_node = IGRAPH_FROM(induced_subgraph, current_edge); *1/ */
-        /*     /1*         int to_node = IGRAPH_TO(induced_subgraph, current_edge); *1/ */
-        /*     /1*         if(in_partition_set.contains(from_node) && in_partition_set.contains(to_node)) { *1/ */
-        /*     /1*             num_edge_in_side ++; *1/ */
-        /*     /1*         } *1/ */
-        /*     /1*         if(out_partition_set.contains(from_node) && out_partition_set.contains(to_node)) { *1/ */
-        /*     /1*             num_edge_out_side ++; *1/ */
-        /*     /1*         } *1/ */
-        /*     /1*     } *1/ */
-        /*     /1*     igraph_eit_destroy(&eit); *1/ */
-        /*     /1* } *1/ */
-
-        /*     /1* bool edge_connectivity = (num_edge_in_side / threshold_value > edge_cut_size) && (num_edge_out_side / threshold_value > edge_cut_size); *1/ */
-        /*     /1* std::cerr << edge_cut_size << std::endl; *1/ */
-        /*     bool node_connectivity = log10(in_partition.size() + out_partition.size()) < edge_cut_size; */
-        /*     /1* return edge_connectivity && node_connectivity; *1/ */
-        /*     return node_connectivity; */
-        /* } */
 
     protected:
         std::string edgelist;
@@ -500,6 +566,14 @@ class ConstrainedClustering {
         double connectedness_criterion_x;
         double pre_computed_log;
         ConnectednessCriterion current_connectedness_criterion;
+
+        // Yield config (disabled by default — empty yield_dir means no yielding)
+        std::string yield_dir;
+        int yield_node_threshold = 0;
+        int yield_fd = -1;  // pipe fd for real-time yield notification (-1 = disabled)
+        int next_yield_id = 0;
+        std::vector<YieldRecord> yield_records;
+        std::string connectedness_criterion_custom_string;
 };
 
 #endif

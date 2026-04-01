@@ -11,6 +11,7 @@ int MincutOnly::main() {
     double connectedness_criterion_x = this->connectedness_criterion_x;
     double pre_computed_log = this->pre_computed_log;
     ConnectednessCriterion current_connectedness_criterion = this->current_connectedness_criterion;
+    std::string connectedness_criterion_custom_string = this->connectedness_criterion_custom_string;
     this->WriteToLogFile("Loading the initial graph" , Log::info);
 
 
@@ -67,7 +68,7 @@ int MincutOnly::main() {
                 }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
-                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, this->mincut_type));
+                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, connectedness_criterion_custom_string, this->mincut_type));
                 }
                 /* get the result back from threads */
                 /* the results from each thread gets stored in to_be_clustered_clusters */
@@ -76,7 +77,7 @@ int MincutOnly::main() {
                 }
             } else {
                 MincutOnly::to_be_mincut_clusters.push({-1});
-                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log);
+                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, connectedness_criterion_custom_string);
             }
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut after a round of mincuts", Log::debug);
             /** SECTION MinCut Each Connected Component END **/
@@ -90,10 +91,62 @@ int MincutOnly::main() {
             }
             /** SECTION Check If All Clusters Are Well-Connected END **/
 
+            /** SECTION Yield Large Sub-Clusters START **/
+            if (!this->yield_dir.empty() && this->yield_node_threshold > 0) {
+                // Drain queue for yield analysis
+                std::vector<std::vector<int>> pending;
+                while (!MincutOnly::to_be_mincut_clusters.empty()) {
+                    pending.push_back(MincutOnly::to_be_mincut_clusters.front());
+                    MincutOnly::to_be_mincut_clusters.pop();
+                }
+
+                // Find sub-clusters large enough to be worth redistributing
+                std::vector<size_t> large_indices;
+                for (size_t i = 0; i < pending.size(); i++) {
+                    if ((int)pending[i].size() >= this->yield_node_threshold) {
+                        large_indices.push_back(i);
+                    }
+                }
+
+                std::set<size_t> yield_indices;
+
+                // Only yield when there are 2+ large sub-clusters:
+                // keep the largest locally, yield the rest. Logic is that the in-flight time could compensate a bit of the processing time
+                if (large_indices.size() >= 2) {
+                    std::sort(large_indices.begin(), large_indices.end(),
+                        [&pending](size_t a, size_t b) {
+                            return pending[a].size() > pending[b].size();
+                        });
+
+                    for (size_t i = 1; i < large_indices.size(); i++) {
+                        yield_indices.insert(large_indices[i]);
+                    }
+
+                    for (size_t idx : yield_indices) {
+                        this->WriteYieldCluster(&graph, pending[idx], new_to_originial_id_map);
+                    }
+
+                    this->WriteToLogFile("Yielded " + std::to_string(yield_indices.size()) +
+                        " sub-clusters, keeping largest (" +
+                        std::to_string(pending[large_indices[0]].size()) + " nodes) locally",
+                        Log::info);
+                }
+
+                // Push non-yielded back to queue
+                for (size_t i = 0; i < pending.size(); i++) {
+                    if (yield_indices.count(i) == 0) {
+                        MincutOnly::to_be_mincut_clusters.push(pending[i]);
+                    }
+                }
+            }
+            /** SECTION Yield Large Sub-Clusters END **/
+
             iter_count ++;
         }
     }
 
+
+    this->WriteYieldSummary();
 
     this->WriteToLogFile("Writing output to: " + this->output_file, Log::info);
     this->WriteClusterQueue(MincutOnly::done_being_mincut_clusters, &graph, new_to_originial_id_map);
