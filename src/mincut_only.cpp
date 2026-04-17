@@ -11,6 +11,7 @@ int MincutOnly::main() {
     double connectedness_criterion_x = this->connectedness_criterion_x;
     double pre_computed_log = this->pre_computed_log;
     ConnectednessCriterion current_connectedness_criterion = this->current_connectedness_criterion;
+    std::string connectedness_criterion_custom_string = this->connectedness_criterion_custom_string;
     this->WriteToLogFile("Loading the initial graph" , Log::info);
 
 
@@ -67,7 +68,7 @@ int MincutOnly::main() {
                 }
                 std::vector<std::thread> thread_vector;
                 for(int i = 0; i < this->num_processors; i ++) {
-                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, this->mincut_type));
+                    thread_vector.push_back(std::thread(MincutOnly::MinCutWorker, &graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, connectedness_criterion_custom_string, this->mincut_type));
                 }
                 /* get the result back from threads */
                 /* the results from each thread gets stored in to_be_clustered_clusters */
@@ -76,7 +77,7 @@ int MincutOnly::main() {
                 }
             } else {
                 MincutOnly::to_be_mincut_clusters.push({-1});
-                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log);
+                MincutOnly::MinCutWorker(&graph, current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, connectedness_criterion_custom_string);
             }
             this->WriteToLogFile(std::to_string(MincutOnly::to_be_mincut_clusters.size()) + " [connected components / clusters] to be mincut after a round of mincuts", Log::debug);
             /** SECTION MinCut Each Connected Component END **/

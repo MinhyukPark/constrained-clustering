@@ -38,7 +38,7 @@ class CM : public ConstrainedClustering {
             return cluster_vectors;
         }
 
-        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, bool prune, std::string mincut_type = "cactus") {
+        static inline void MinCutOrClusterWorker(const igraph_t* graph, std::string algorithm, int seed, double clustering_parameter, ConnectednessCriterion current_connectedness_criterion, double connectedness_criterion_c, double connectedness_criterion_x, double pre_computed_log, bool prune, const std::string& connectedness_criterion_custom_string, std::string mincut_type = "cactus") {
             while (true) {
                 std::unique_lock<std::mutex> to_be_mincut_lock{to_be_mincut_mutex};
                 std::pair<std::vector<int>, int> current_front = CM::to_be_mincut_clusters.front();
@@ -78,7 +78,7 @@ class CM : public ConstrainedClustering {
                     edge_cut_size = mcc.ComputeMinCut();
                     std::vector<int> in_partition_candidate = mcc.GetInPartition();
                     std::vector<int> out_partition_candidate = mcc.GetOutPartition();
-                    is_well_connected = ConstrainedClustering::IsWellConnected(current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, in_partition_candidate.size(), out_partition_candidate.size(), edge_cut_size);
+                    is_well_connected = ConstrainedClustering::IsWellConnected(current_connectedness_criterion, connectedness_criterion_c, connectedness_criterion_x, pre_computed_log, in_partition_candidate.size(), out_partition_candidate.size(), edge_cut_size, connectedness_criterion_custom_string);
                     is_non_trivial_cut = in_partition_candidate.size() > 1 && out_partition_candidate.size() > 1;
                     if(!prune || is_well_connected || is_non_trivial_cut) {
                         in_partition = in_partition_candidate;
